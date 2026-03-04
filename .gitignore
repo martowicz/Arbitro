@@ -1,0 +1,11 @@
+# Środowisko wirtualne
+venv/
+__pycache__/
+
+# Dane i sekrety
+.env
+*.db
+*.json
+
+# Logi
+*.log

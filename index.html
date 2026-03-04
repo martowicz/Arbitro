@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arbitro - Oś Czasu Aktywności</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5; 
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        .container {
+            max-width: 1200px; /* ZWIĘKSZONO SZEROKOŚĆ NA POTRZEBY DWÓCH KOLUMN */
+            margin: 0 auto;
+        }
+        /* GŁÓWNA KARTA AKTYWNOŚCI */
+        .match-card {
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08); 
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .match-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+        /* NAGŁÓWEK KARTY */
+        .match-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+        .match-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #1a252f; 
+            margin-bottom: 3px;
+        }
+        .match-date {
+            color: #555; 
+            font-size: 0.95em;
+            font-weight: 500;
+        }
+        /* STATYSTYKI */
+        .match-stats {
+            display: flex;
+            justify-content: space-around;
+            background-color: rgba(255, 255, 255, 0.6); 
+            padding: 18px;
+            border-radius: 10px;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        .stat-item {
+            text-align: center;
+            flex: 1;
+        }
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: 800;
+            color: #2c3e50; 
+        }
+        .stat-label {
+            font-size: 0.85em;
+            color: #444;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            font-weight: 600;
+            margin-top: 3px;
+        }
+        /* ODZNAKA (BADGE) */
+        .role-badge {
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: 700;
+            white-space: nowrap;
+            margin-left: 15px;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div style="margin-bottom: 20px; text-align: center;">
+        <button id="btn-pobierz" onclick="pobierzDane()" style="
+            background-color: #3498db; 
+            color: white; border: none; padding: 12px 20px; border-radius: 8px; 
+            font-weight: 800; cursor: pointer; text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(52,152,219,0.3);">
+            🔄 Pobierz i zsynchronizuj dane
+        </button>
+        
+        <p id="komunikat-ladowania" style="display: none; color: #f39c12; margin-top: 10px; font-weight: bold;">
+            ⏳ Trwa pobieranie... To może potrwać kilkanaście sekund.
+        </p>
+    </div>
+    <div class="container" style="text-align: right; margin-bottom: 5px; display: flex; justify-content: flex-end; gap: 10px;">
+        <button id="sync-pzpn-btn" onclick="triggerSync('pzpn')" style="
+            background-color: #e74c3c; 
+            color: white; border: none; padding: 12px 20px; border-radius: 8px; 
+            font-weight: 800; cursor: pointer; text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(231,76,60,0.3);">
+            ⚽ Sync PZPN
+        </button>
+
+        <button id="sync-garmin-btn" onclick="triggerSync('garmin')" style="
+            background-color: #3498db; 
+            color: white; border: none; padding: 12px 20px; border-radius: 8px; 
+            font-weight: 800; cursor: pointer; text-transform: uppercase;
+            box-shadow: 0 4px 10px rgba(52,152,219,0.3);">
+            ⌚ Sync Garmin
+        </button>
+    </div>
+    
+    <div class="container">
+        <p id="sync-status" style="text-align: right; font-size: 0.85em; color: #7f8c8d; min-height: 20px; margin-top: 0; margin-bottom: 20px;"></p>
+        
+        <h1>🏆 Arbitro - Oś Czasu</h1>
+        <p style="text-align: center; color: #555; margin-top: 0; margin-bottom: 40px;">Kompletna historia Twoich meczów i treningów</p>
+
+        <div style="display: flex; gap: 30px; align-items: flex-start;">
+
+            <div style="flex: 0 0 35%; position: sticky; top: 20px;">
+                
+                <button id="ai-btn" onclick="triggerAI()" style="
+                    width: 100%; 
+                    background-color: #9b59b6; 
+                    color: white; border: none; padding: 15px 20px; border-radius: 8px; 
+                    font-weight: 800; cursor: pointer; text-transform: uppercase;
+                    box-shadow: 0 4px 10px rgba(155,89,182,0.3); margin-bottom: 20px; font-size: 1.1em;">
+                    🤖 Zapytaj Trenera
+                </button>
+
+                <div id="ai-panel" style="display: none; background-color: #2c3e50; border-left: 6px solid #9b59b6; border-radius: 12px; padding: 20px; margin-bottom: 25px; color: white; box-shadow: 0 10px 20px rgba(0,0,0,0.2);">
+                    <h3 style="margin-top: 0; color: #ecf0f1; font-weight: 800;">🤖 Twój AI Coach:</h3>
+                    <p id="ai-response-text" style="line-height: 1.6; font-size: 1.05em; opacity: 0.9;">Analizuję Twoje ostatnie treningi i mecze...</p>
+                </div>
+            </div>
+
+            <div style="flex: 1;">
+                <div id="matches-container">
+                    <p style="text-align: center;">⏳ Ładowanie historii aktywności...</p>
+                </div>
+            </div>
+
+        </div> </div>
+    
+    <script>
+        async function pobierzDane() {
+            const btn = document.getElementById('btn-pobierz');
+            const komunikat = document.getElementById('komunikat-ladowania');
+
+            // Ukrywamy przycisk i pokazujemy tekst ładowania
+            btn.style.display = 'none';
+            komunikat.style.display = 'block';
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/pobierz_dane', {
+                    method: 'POST'
+                });
+                const result = await response.json();
+
+                if (result.status === 'sukces') {
+                    alert("Sukces! " + result.wiadomosc);
+                    // Odśwież stronę, żeby załadować nowo pobrane dane
+                    window.location.reload(); 
+                } else {
+                    alert("Wystąpił błąd: " + result.wiadomosc);
+                    // Przywracamy przycisk, jeśli coś poszło nie tak
+                    btn.style.display = 'inline-block';
+                    komunikat.style.display = 'none';
+                }
+            } catch (error) {
+                alert("Błąd połączenia z serwerem.");
+                btn.style.display = 'inline-block';
+                komunikat.style.display = 'none';
+            }
+        }
+        async function triggerAI() {
+            const btn = document.getElementById('ai-btn');
+            const panel = document.getElementById('ai-panel');
+            const textElement = document.getElementById('ai-response-text');
+            
+            // Zmieniamy wygląd przycisku i pokazujemy panel
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.innerText = '🧠 MYŚLĘ...';
+            
+            panel.style.display = 'block';
+            textElement.innerHTML = '<i>Analizuję Twoje ostatnie kilometry, tętno i obciążenie meczowe... ⏳</i>';
+
+            try {
+                // Pytamy nasz własny backend, który pyta OpenAI
+                const response = await fetch('http://127.0.0.1:8000/api/trener_ai');
+                const data = await response.json();
+                
+                // Wyświetlamy odpowiedź
+                textElement.innerHTML = data.porada
+                    .replace(/#/g, '')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #3498db;">$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em style="color: #e67e22;">$1</em>')
+                    .replace(/\n/g, '<br>'); // zamienia entery na nową linię w HTML
+                
+            } catch (error) {
+                textElement.innerHTML = '<span style="color: #e74c3c;">Błąd komunikacji z trenerem AI. Sprawdź terminal.</span>';
+            } finally {
+                // Odblokowujemy przycisk
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.innerText = '🤖 Zapytaj Trenera';
+            }
+        }
+
+        async function triggerSync(platform) {
+            const btnId = `sync-${platform}-btn`;
+            const btn = document.getElementById(btnId);
+            const statusText = document.getElementById('sync-status');
+            
+            const originalText = btn.innerText;
+            
+            // 1. Blokujemy przycisk i zmieniamy wygląd
+            btn.disabled = true;
+            btn.style.opacity = '0.5';
+            btn.innerText = '⌛ TRWA POBIERANIE...';
+            statusText.innerText = `Synchronizacja ${platform.toUpperCase()} w toku. Proszę czekać...`;
+
+            try {
+                // 2. Dajemy serwerowi sygnał do startu (działa w tle)
+                await fetch(`http://127.0.0.1:8000/api/sync/${platform}`, { method: 'POST' });
+                
+                // 3. Rozpoczynamy cykliczne sprawdzanie (Polling) co 3 sekundy
+                const checkInterval = setInterval(async () => {
+                    try {
+                        const statusRes = await fetch('http://127.0.0.1:8000/api/sync/status');
+                        const statusData = await statusRes.json();
+                        
+                        // Jeśli serwer zgłosił, że skończył pracę (is_syncing = false)
+                        if (statusData.is_syncing === false) {
+                            clearInterval(checkInterval); // Zatrzymujemy sprawdzanie
+                            
+                            // Przywracamy przycisk
+                            btn.disabled = false;
+                            btn.style.opacity = '1';
+                            btn.innerText = originalText;
+                            statusText.innerText = '✅ Gotowe! Lista została zaktualizowana.';
+                            statusText.style.color = '#2ecc71';
+                            
+                            // 🌟 MAGICZNY MOMENT: Odświeżamy listę bez przeładowywania strony!
+                            fetchMatches(); 
+                            
+                            // Ukrywamy napis po 4 sekundach
+                            setTimeout(() => {
+                                statusText.innerText = '';
+                                statusText.style.color = '#7f8c8d'; // powrót do szarego
+                            }, 4000);
+                        }
+                    } catch (err) {
+                        console.error("Błąd podczas sprawdzania statusu:", err);
+                    }
+                }, 3000); // 3000 milisekund = 3 sekundy
+
+            } catch (error) {
+                alert("Błąd połączenia z API. Upewnij się, że serwer działa.");
+                btn.disabled = false;
+                btn.style.opacity = '1';
+                btn.innerText = originalText;
+                statusText.innerText = '';
+            }
+        }
+
+        async function fetchMatches() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/api/events');
+                const items = await response.json();
+                
+                const container = document.getElementById('matches-container');
+                container.innerHTML = ''; 
+
+                if (items.length === 0) {
+                    container.innerHTML = '<p style="text-align: center;">Brak zarejestrowanych aktywności.</p>';
+                    return;
+                }
+
+                items.forEach(item => {
+                    const dystans = item.dystans ? parseFloat(item.dystans).toFixed(2) + ' km' : 'Brak';
+                    const tetno = item.tetno ? item.tetno + ' bpm' : 'Brak';
+                    const kalorie = item.kalorie ? item.kalorie + ' kcal' : 'Brak';
+
+                    // --- NOWA LOGIKA KOLORÓW ---
+                    let styles = {
+                        cardBg: '',      
+                        borderLeft: '',  
+                        headerLine: '',  
+                        badgeBg: '',     
+                        badgeText: ''    
+                    };
+
+                    if (item.typ_wpisu === 'past_matches') {
+                        styles.cardBg = '#9BFF8C';      
+                        styles.borderLeft = '#2ecc71';  
+                        styles.headerLine = 'rgba(46, 204, 113, 0.3)';
+                        styles.badgeBg = '#2ecc71';     
+                        styles.badgeText = 'white';
+                    } else if (item.typ_wpisu === 'upcoming_matches') {
+                        styles.cardBg = '#FF9D00';      
+                        styles.borderLeft = '#ED9700';  
+                        styles.headerLine = 'rgba(46, 204, 113, 0.3)';
+                        styles.badgeBg = 'CF8900';     
+                        styles.badgeText = 'white';
+                    } 
+                    else {
+                        // PALETA NIEBIESKA DLA TRENINGÓW 🔵
+                        styles.cardBg = '#87D3FF';      
+                        styles.borderLeft = '#3498db';  
+                        styles.headerLine = 'rgba(52, 152, 219, 0.3)';
+                        styles.badgeBg = '#3498db';     
+                        styles.badgeText = 'white';
+                    }
+
+                    const cardHTML = `
+                        <div class="match-card" style="background-color: ${styles.cardBg}; border-left: 6px solid ${styles.borderLeft}; margin-top: 0;">
+                            <div class="match-header" style="border-bottom: 1px solid ${styles.headerLine};">
+                                <div>
+                                    <div class="match-title">${item.tytul}</div>
+                                    <div class="match-date">${item.data}</div>
+                                </div>
+                                <span class="role-badge" style="background-color: ${styles.badgeBg}; color: ${styles.badgeText};">${item.podtytul}</span>
+                            </div>
+                            <div class="match-stats">
+                                <div class="stat-item">
+                                    <div class="stat-value">🏃 ${dystans}</div>
+                                    <div class="stat-label">Dystans</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">❤️ ${tetno}</div>
+                                    <div class="stat-label">Śr. Tętno</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-value">🔥 ${kalorie}</div>
+                                    <div class="stat-label">Kalorie</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    container.innerHTML += cardHTML;
+                });
+            } catch (error) {
+                console.error('Błąd pobierania danych:', error);
+                document.getElementById('matches-container').innerHTML = '<p style="text-align: center; color: red;">Błąd połączenia z serwerem API! Upewnij się, że backend działa.</p>';
+            }
+        }
+
+        window.onload = fetchMatches;
+    </script>
+</body>
+</html>
