@@ -3,6 +3,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from pathlib import Path
+import os
+print(f"DEBUG: Szukam bazy w: {os.path.abspath('arbitro.db')}")
+print(f"DEBUG: Czy plik istnieje? {os.path.exists('arbitro.db')}")
 
 # Najpierw wczytujemy .env z głównego folderu
 BASE_DIR = Path(__file__).resolve().parent

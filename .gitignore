@@ -1,21 +1,50 @@
-# Środowisko wirtualne
+# ==========================================
+# 1. BACKEND (Python)
+# ==========================================
+# Ignoruj środowisko wirtualne w podfolderze backend
+backend/venv/
+backend/env/
 venv/
-__pycache__/
-*.pyc
 
-# Dane i sekrety
-.env
-*.db
-*.json
+# Ignoruj pliki tymczasowe Pythona
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
 
-# Logi
-*.log
+# Ignoruj bazę danych i dane lokalne (prywatność)
+backend/arbitro.db
+backend/match_data/
+backend/training_data/
+backend/*.json
+!backend/requirements.txt
 
+# ==========================================
+# 2. FRONTEND (Vue.js / Vite)
+# ==========================================
+# Ignoruj paczki Node.js (niezależnie od nazwy folderu frontendu)
+**/node_modules/
+
+# Ignoruj folder z gotową aplikacją (build)
+**/dist/
+
+# Ignoruj logi błędów npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ==========================================
+# 3. BEZPIECZEŃSTWO I SEKRETY (KLUCZE API)
+# ==========================================
+# NIGDY nie wrzucaj plików .env na GitHub!
+**/.env
+**/.env.local
+**/.env.*.local
+
+# ==========================================
+# 4. SYSTEMOWE I EDYTOR
+# ==========================================
 .vscode/
+.idea/
 .DS_Store
-
-vue-arbitro/dist/
-dist/
-
-vue-arbitro/node_modules/
-node_modules/
+Thumbs.db
