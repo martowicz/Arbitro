@@ -1,6 +1,7 @@
 # Środowisko wirtualne
 venv/
 __pycache__/
+*.pyc
 
 # Dane i sekrety
 .env
@@ -9,3 +10,12 @@ __pycache__/
 
 # Logi
 *.log
+
+.vscode/
+.DS_Store
+
+vue-arbitro/dist/
+dist/
+
+vue-arbitro/node_modules/
+node_modules/
