@@ -16,6 +16,7 @@ venv/
 backend/arbitro.db
 backend/match_data/
 backend/training_data/
+backend/training_details/
 backend/*.json
 !backend/requirements.txt
 
