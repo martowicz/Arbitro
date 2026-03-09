@@ -1,24 +1,22 @@
 <template>
   <div>
-      <div style="margin-bottom: 20px; text-align: center;">
-          <button v-if="!isDownloading" @click="pobierzDane" class="btn-main">
-              🔄 Pobierz i zsynchronizuj dane
+      
+
+      <div class="container sync-buttons-right">
+        <button v-if="!isDownloading" @click="pobierzDane" class="btn-main">
+              🔄 Pobierz i zsynchronizuj wszystkie dane
           </button>
           <p v-else style="color: #f39c12; margin-top: 10px; font-weight: bold;">
               ⏳ Trwa pobieranie... To może potrwać kilkanaście sekund.
           </p>
-      </div>
-
-      <div class="container sync-buttons-right">
           <button @click="triggerSync('pzpn')" :disabled="isSyncing" class="btn-pzpn" :class="{ 'disabled-btn': isSyncing }">
               {{ isSyncing && currentSync === 'pzpn' ? '⌛ TRWA...' : '⚽ Sync PZPN' }}
           </button>
           <button @click="triggerSync('garmin')" :disabled="isSyncing" class="btn-main" :class="{ 'disabled-btn': isSyncing }">
               {{ isSyncing && currentSync === 'garmin' ? '⌛ TRWA...' : '⌚ Sync Garmin' }}
           </button>
+          <p class="status-text" :style="{ color: syncStatusColor }">{{ syncStatusMessage }}</p>
       </div>
-      
-      <p class="status-text" :style="{ color: syncStatusColor }">{{ syncStatusMessage }}</p>
   </div>
 </template>
 
@@ -54,7 +52,7 @@ const triggerSync = async (platform) => {
   isSyncing.value = true
   currentSync.value = platform
   syncStatusMessage.value = `Synchronizacja ${platform.toUpperCase()} w toku...`
-  syncStatusColor.value = '#7f8c8d'
+  syncStatusColor.value = '#ffffff'
 
   try {
       await fetch(`http://127.0.0.1:8000/api/sync/${platform}`, { method: 'POST' })
@@ -68,7 +66,7 @@ const triggerSync = async (platform) => {
               isSyncing.value = false
               currentSync.value = null
               syncStatusMessage.value = '✅ Gotowe! Lista zaktualizowana.'
-              syncStatusColor.value = '#2ecc71'
+              syncStatusColor.value = '#ffffff'
               
               emit('data-updated')
               

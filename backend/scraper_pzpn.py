@@ -7,7 +7,7 @@ import sqlite3
 
 load_dotenv()
 
-CURRENT_SEASON = "2025/2026" # Ustaw swój sezon docelowy
+CURRENT_SEASON = os.getenv("CURRENT_SEASON") # Ustaw swój sezon docelowy
 import os
 from pathlib import Path
 

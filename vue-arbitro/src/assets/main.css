@@ -1,9 +1,25 @@
+:root {
+  /* Paleta kolorów - Twój unikalny klimat */
+  --primary-color: #144c00;    /* Główny kolor (np. indygo) */
+  --accent-color: #34810183;     /* Kolor akcentu (np. neonowy róż) */
+  --bg-color: #104801;         /* Tło (np. ciemny granat) */
+  --card-bg: #1e293b;          /* Tło kart */
+  --text-main: #f8fafc;
+  --past-match-bg-color: #167a00;
+  --upcoming-match-bg-color: #c69c04;
+  --training-bg-color: #5067da;
+  
+  /* Typografia i odstępy */
+  --radius: 10px;
+  --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+  --font-main: 'Mada', sans-serif;
+}
+
+
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #f0f2f5; 
-    margin: 0;
-    padding: 20px;
-    color: #333;
+  font-family: var(--font-main);
+  background-color: var(--bg-color);
+  color: var(--text-main);
 }
 .container {
     max-width: 1200px; 

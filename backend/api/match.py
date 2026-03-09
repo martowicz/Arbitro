@@ -2,7 +2,7 @@
 from fastapi import APIRouter, BackgroundTasks
 import subprocess
 import sys
-from .utils import pobierz_z_bazy, run_script, SYNC_STATE, BASE_DIR
+from .utils import pobierz_z_bazy, run_script, SYNC_STATE, BASE_DIR, time_transform
 
 # Tworzymy router dla tej sekcji
 router = APIRouter(prefix="/api")
@@ -21,7 +21,7 @@ def get_events():
     # 1. POBIERAMY WSZYSTKIE MECZE
     mecze = pobierz_z_bazy('''
         SELECT m.mecz_id, m.data_meczu, m.gospodarze, m.goscie, m.liga, o.rola,
-               SUM(t.dystans_km) as full_distance, ROUND(AVG(t.tetno_sr)) as average_heart_rate, SUM(t.kalorie) as full_calories
+               SUM(t.dystans_km) as full_distance, SUM(t.czas_min) as full_time, ROUND(AVG(t.tetno_sr)) as average_heart_rate, SUM(t.kalorie) as full_calories
         FROM mecze m
         JOIN obsady o ON m.mecz_id = o.mecz_id
         JOIN sedziowie s ON o.sedzia_id = s.id
@@ -33,6 +33,8 @@ def get_events():
     for m in mecze:
         # Decydujemy, czy mecz jest z przeszłości, czy z przyszłości
         kategoria = "past_matches" if m['data_meczu'] < teraz else "upcoming_matches"
+        raw_time = m['full_time']
+        display_time = time_transform(raw_time) if (raw_time and raw_time > 3) else "0:00"
         
         events.append({
             "typ_wpisu": kategoria, # Wrzucamy odpowiednią kategorię
@@ -42,7 +44,8 @@ def get_events():
             "dystans": m['full_distance'], 
             "tetno": m['average_heart_rate'], 
             "kalorie": m['full_calories'], 
-            "sort_date": m['data_meczu']
+            "sort_date": m['data_meczu'],
+            "time" : display_time
         })
 
     # 2. POBIERAMY TRENINGI
@@ -50,6 +53,10 @@ def get_events():
     
     for t in treningi:
         emoji = "🏃" if t['typ'] == "running" else "🚴" if t['typ'] == "cycling" else "💪"
+
+        raw_t_time = t['czas_min']
+        display_t_time = time_transform(raw_t_time) if (raw_t_time and raw_t_time > 3) else "0:00"
+
         events.append({
             "typ_wpisu": "training", # Wrzucamy kategorię treningu
             "data": str(t['data_startu'])[:16], 
@@ -58,7 +65,8 @@ def get_events():
             "dystans": t['dystans_km'],
             "tetno": t['tetno_sr'], 
             "kalorie": t['kalorie'], 
-            "sort_date": t['data_startu']
+            "sort_date": t['data_startu'],
+            "time" : display_t_time
         })
 
     # 3. SORTUJEMY WSZYSTKO "JAK LECI" (Malejąco - najnowsze i przyszłe na samej górze)

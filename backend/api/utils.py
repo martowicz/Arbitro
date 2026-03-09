@@ -68,3 +68,10 @@ def run_script(script_name: str):
         print(f"❌ KRYTYCZNY BŁĄD w run_script: {e}")
     finally:
         SYNC_STATE["is_syncing"] = False
+
+
+def time_transform(time_in_minutes):
+    hours = int(time_in_minutes // 60);
+    minutes = int(time_in_minutes % 60);
+    full_time = f"{hours}:{minutes}"
+    return full_time
