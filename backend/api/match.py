@@ -3,17 +3,18 @@ from fastapi import APIRouter, BackgroundTasks
 import subprocess
 import sys
 from .utils import pobierz_z_bazy, run_script, SYNC_STATE, BASE_DIR, time_transform
-
+import os
+from dotenv import load_dotenv
 # Tworzymy router dla tej sekcji
 router = APIRouter(prefix="/api")
-
+load_dotenv()
 
 from datetime import datetime
 
 @router.get("/events")
 def get_events():
     events = [] # Jeden wspólny worek na wszystko
-    MOJE_NAZWISKO = "Martowicz Jan" 
+    MOJE_NAZWISKO = os.getenv("SURNAME_NAME") 
     
     # Pobieramy obecny czas w formacie pasującym do bazy (YYYY-MM-DD HH:MM)
     teraz = datetime.now().strftime("%Y-%m-%d %H:%M")
