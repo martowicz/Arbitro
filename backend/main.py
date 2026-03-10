@@ -12,7 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(dotenv_path=BASE_DIR / ".env")
 
 # Teraz importujemy nasze rozbite moduły API
-from api import match, training, coach_ai
+from api import events, sync, coach_ai
 
 app = FastAPI(title="Arbitro API")
 
@@ -26,9 +26,11 @@ app.add_middleware(
 )
 
 # Rejestrujemy moduły w aplikacji (Routery z "api/" folderu)
-app.include_router(match.router, tags=["Mecze i Kalendarz"])
-app.include_router(training.router, tags=["Treningi (Garmin)"])
-app.include_router(coach_ai.router, tags=["Trener AI"])
+
+
+app.include_router(events.router)
+app.include_router(sync.router)
+#app.include_router(coach_ai.router)
 
 @app.get("/")
 def read_root():

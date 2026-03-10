@@ -102,7 +102,7 @@ def scrape_garmin():
         klient.login()
         print("✅ Zalogowano pomyślnie!\n")
 
-        limit = 30 # Możesz tu wpisać np. 100, jeśli chcesz pobrać więcej historii
+        limit = 10 # Możesz tu wpisać np. 100, jeśli chcesz pobrać więcej historii
         print(f"🏃 Pobieram {limit} ostatnich aktywności...")
         
         # Pobieranie surowych danych (Podsumowania)

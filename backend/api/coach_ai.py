@@ -4,7 +4,7 @@ import sqlite3
 from datetime import datetime, timedelta
 from fastapi import APIRouter
 from openai import OpenAI
-from .utils import pobierz_z_bazy, DB_PATH, BASE_DIR
+from .utils import fetch_from_db, DB_PATH, BASE_DIR
 
 router = APIRouter(prefix="/api")
 

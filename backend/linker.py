@@ -8,7 +8,7 @@ dotenv.load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = str(BASE_DIR / "arbitro.db")
-MOJE_NAZWISKO = os.getenv("MOJE_NAZWISKO")
+MOJE_NAZWISKO = os.getenv("SURNAME_NAME")
 
 def run_linker():
     print("🚀 Uruchamiam zoptymalizowany system łączenia danych...")
@@ -51,6 +51,7 @@ def run_linker():
                 # Garmin zapisuje daty z sekundami: "%Y-%m-%d %H:%M:%S"
                 trening_czas = datetime.strptime(trening['data_startu'], "%Y-%m-%d %H:%M:%S")
             except ValueError:
+                print(f"  ⚠️ Błąd daty treningu ({trening['nazwa']}): {trening['data_startu']}")
                 continue
 
             # Sprawdzamy, czy to ten sam dzień
