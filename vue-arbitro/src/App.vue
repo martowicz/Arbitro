@@ -6,18 +6,14 @@
         <div style="display: flex; gap: 30px; align-items: flex-start;">
             
             <div style="flex: 1;">
-                <p v-if="isLoadingMatches" style="text-align: center;">⏳ Ładowanie historii...</p>
-                <p v-else-if="matches.length === 0" style="text-align: center;">Brak aktywności.</p>
-                
-                <div v-else>
-                    <Activity 
-                        v-for="match in paginatedMatches" 
-                        :key="match.id || match.tytul + match.data" 
-                        :activity="match" 
-                    />
-                </div>
-
                 <div v-if="totalPages > 1" class="pagination-controls">
+                    <button 
+                        @click="firstPage" 
+                        :disabled="currentPage === 1"
+                        class="page-btn"
+                    >
+                        Pierwsza
+                    </button>
                     <button 
                         @click="prevPage" 
                         :disabled="currentPage === 1"
@@ -35,7 +31,28 @@
                     >
                         Następna &raquo;
                     </button>
+                    <button 
+                        @click="lastPage" 
+                        :disabled="currentPage === totalPages"
+                        class="page-btn"
+                    >
+                        Ostatnia
+                    </button>
                 </div>
+
+                <p v-if="isLoadingMatches" style="text-align: center;">⏳ Ładowanie historii...</p>
+                <p v-else-if="matches.length === 0" style="text-align: center;">Brak aktywności.</p>
+                
+                
+                <div v-else>
+                    <Activity 
+                        v-for="match in paginatedMatches" 
+                        :key="match.id || match.tytul + match.data" 
+                        :activity="match" 
+                    />
+                </div>
+
+                
 
             </div>
 
@@ -81,6 +98,23 @@ const prevPage = () => {
     }
 }
 
+const firstPage = () => {
+    if (currentPage.value > 1) {
+        currentPage.value=1
+        window.scrollTo({top: 0, behavior: 'smooth'})
+    }
+}
+
+const lastPage = () => {
+    if (currentPage.value < totalPages.value) {
+        currentPage.value=totalPages.value
+        window.scrollTo({top: 0, behavior: 'smooth'})
+    }
+}
+
+
+
+
 const nextPage = () => {
     if (currentPage.value < totalPages.value) {
         currentPage.value++
@@ -115,8 +149,8 @@ onMounted(() => {
     justify-content: center;
     align-items: center;
     gap: 20px;
-    margin-top: 30px;
-    padding-bottom: 20px;
+    margin-top: 10px;
+    padding-bottom: 10px;
 }
 
 .page-btn {
