@@ -30,6 +30,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { ref } from 'vue'
 
 const props = defineProps({
   activity: Object
@@ -52,6 +53,15 @@ const styles = computed(() => {
         badgeBg: 'var(--training-bg-color)', 
         badgeText: 'white' };
 })
+
+const selectedItemId = ref(null)
+const selectedItemType = ref(null)
+
+const openChart = (id, type) => {
+  selectedItemId.value = id
+  selectedItemType.value = type
+  isModalOpen.value = true
+}
 </script>
 
 <style scoped>

@@ -2,6 +2,7 @@ import sqlite3
 import subprocess
 import sys
 from pathlib import Path
+import json
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DB_PATH = str(BASE_DIR / "arbitro.db")
@@ -72,3 +73,71 @@ def format_time(time_in_minutes: float) -> str:
     minutes = int(time_in_minutes % 60)
     # :02d gwarantuje, że zawsze będą dwie cyfry (np. 05 zamiast 5)
     return f"{hours}:{minutes:02d}"
+
+
+def format_referee_minute(mins: int, half_number: int = None) -> str:
+    """Formatuje minuty na czas sędziowski (np. 45+2)."""
+    if half_number == 1:
+        return f"45+{mins - 45 + 1}" if mins >= 45 else str(mins + 1)
+    elif half_number == 2:
+        total_mins = 45 + mins
+        return f"90+{total_mins - 90 + 1}" if total_mins >= 90 else str(total_mins + 1)
+    
+    return str(mins + 1)
+
+
+def extract_garmin_hr_data(file_path: str, half_number: int = None, sample_interval_sec: int = 60):
+    """
+    Wyciąga i próbkkuje dane tętna z pliku Garmina.
+    
+    :param file_path: Ścieżka do pliku JSON
+    :param half_number: 1 dla pierwszej połowy, 2 dla drugiej, None dla treningów
+    :param sample_interval_sec: Co ile sekund pobierać próbkę (domyślnie 60s)
+    :return: Krotka (labels, hr_data)
+    """
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            raw_data = json.load(f)
+    except Exception:
+        return None, None
+        
+    ts_idx, hr_idx = None, None
+    for desc in raw_data.get("metricDescriptors", []):
+        if desc.get("key") == "directTimestamp": ts_idx = desc.get("metricsIndex")
+        elif desc.get("key") == "directHeartRate": hr_idx = desc.get("metricsIndex")
+        
+    metrics_list = raw_data.get("activityDetailMetrics", [])
+    if not metrics_list or ts_idx is None or hr_idx is None:
+        return None, None
+        
+    start_ts = metrics_list[0].get("metrics", [])[ts_idx]
+    if start_ts is None:
+        return None, None
+
+    labels = []
+    hr_data = []
+    last_sampled_ts = None
+    
+    for sample in metrics_list:
+        m = sample.get("metrics", [])
+        if len(m) <= max(ts_idx, hr_idx): continue
+        
+        curr_ts = m[ts_idx]
+        hr = m[hr_idx]
+        
+        if curr_ts is None or hr is None or hr == 0: continue
+        
+        # LOGIKA PRÓBKOWANIA: Sprawdzamy, czy minęło wystarczająco dużo czasu (w milisekundach)
+        if last_sampled_ts is not None:
+            if (curr_ts - last_sampled_ts) < (sample_interval_sec * 1000):
+                continue # Pomijamy tę próbkę, bo jest za wcześnie
+                
+        last_sampled_ts = curr_ts
+        mins = int((curr_ts - start_ts) / 60000)
+        
+        label = format_referee_minute(mins, half_number)
+        
+        labels.append(label)
+        hr_data.append(hr)
+            
+    return labels, hr_data
