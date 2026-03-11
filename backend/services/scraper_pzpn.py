@@ -5,17 +5,18 @@ from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright
 from pathlib import Path
 # <--- IMPORTY Z BAZY:
-from database_utils import load_known_data, save_matches_to_db 
+from db.repo_matches import load_known_data, save_matches_to_db
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv()
 CURRENT_SEASON = os.getenv("CURRENT_SEASON")
 
 def save_season_to_json(season, new_matches):
     """Zapisuje dane do pliku JSON w folderze match_data."""
     if not new_matches: return
+    target_folder = BASE_DIR / "data" / "match_data"
     os.makedirs('match_data', exist_ok=True)
-    file_name = f"match_data/season_{season.replace('/', '_')}.json"
+    file_name = target_folder / f"season_{season.replace('/', '_')}.json"
     old_data = []
     if os.path.exists(file_name):
         with open(file_name, 'r', encoding='utf-8') as f:

@@ -47,7 +47,7 @@ def get_ai_analysis(item_type: str, item_id: str):
     sample_interval = 10 # Musi być taki sam jak dla wykresów!
     
     for act_id in activities_to_analyze:
-        file_path = BASE_DIR / "training_details" / f"{act_id}.json"
+        file_path = BASE_DIR / "data" / "training_details" / f"{act_id}.json"
         if file_path.exists():
             _, hr, speed = extract_garmin_data(file_path, half_number=None, sample_interval_sec=sample_interval)
             if hr: all_hr.extend(hr)

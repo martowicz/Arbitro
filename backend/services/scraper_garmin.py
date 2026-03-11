@@ -3,9 +3,9 @@ import json
 from dotenv import load_dotenv
 from garminconnect import Garmin
 from pathlib import Path
-from database_utils import load_garmin_to_db # <--- IMPORT BAZY
+from db.repo_garmin import load_garmin_to_db
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(dotenv_path=BASE_DIR / ".env")
 
 def scrape_garmin():
@@ -27,7 +27,7 @@ def scrape_garmin():
         
         aktywnosci = klient.get_activities(0, limit)
 
-        folder_zapis = BASE_DIR / "training_data"
+        folder_zapis = BASE_DIR / "data" / "training_data"
         os.makedirs(folder_zapis, exist_ok=True) 
         
         sciezka_pliku = folder_zapis / "garmin_activities.json"
@@ -37,7 +37,7 @@ def scrape_garmin():
             
         print(f"💾 Zapisano listę {len(aktywnosci)} treningów do pliku.\n")
         
-        details_folder = BASE_DIR / "training_details"
+        details_folder = BASE_DIR / "data" / "training_details"
         os.makedirs(details_folder, exist_ok=True)
         
         print("🔍 Sprawdzam szczegóły dla biegów i bieżni...")

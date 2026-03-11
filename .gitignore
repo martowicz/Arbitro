@@ -1,46 +1,44 @@
 # ==========================================
 # 1. BACKEND (Python)
 # ==========================================
-# Ignoruj środowisko wirtualne w podfolderze backend
+# Wirtualne środowiska
 backend/venv/
 backend/env/
 venv/
 
-# Ignoruj pliki tymczasowe Pythona
+# Pliki tymczasowe Pythona
 **/__pycache__/
 **/*.pyc
 **/*.pyo
 **/*.pyd
 
-# Ignoruj bazę danych i dane lokalne (prywatność)
-backend/arbitro.db
-backend/match_data/
-backend/training_data/
-backend/training_details/
-backend/*.json
-!backend/requirements.txt
+# Ignoruj CAŁY nowy folder z danymi (SQLite i pobrane JSON-y)
+backend/data/
 
 # ==========================================
 # 2. FRONTEND (Vue.js / Vite)
 # ==========================================
-# Ignoruj paczki Node.js (niezależnie od nazwy folderu frontendu)
+# Paczki Node.js
 **/node_modules/
 
-# Ignoruj folder z gotową aplikacją (build)
+# Gotowa aplikacja (build)
 **/dist/
 
-# Ignoruj logi błędów npm
+# Logi błędów
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
 # ==========================================
-# 3. BEZPIECZEŃSTWO I SEKRETY (KLUCZE API)
+# 3. BEZPIECZEŃSTWO I SEKRETY (KRYTYCZNE!)
 # ==========================================
-# NIGDY nie wrzucaj plików .env na GitHub!
+# Zmienne środowiskowe
 **/.env
 **/.env.local
 **/.env.*.local
+
+# Klucz szyfrujący AES (Prywatność haseł lokalnych)
+**/.secret.key
 
 # ==========================================
 # 4. SYSTEMOWE I EDYTOR

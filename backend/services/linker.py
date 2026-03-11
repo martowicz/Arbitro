@@ -6,8 +6,8 @@ from pathlib import Path
 
 dotenv.load_dotenv()
 
-BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = str(BASE_DIR / "arbitro.db")
+BASE_DIR = Path(__file__).resolve().parent.parent
+DB_PATH = str(BASE_DIR / "data" / "arbitro.db")
 MOJE_NAZWISKO = os.getenv("SURNAME_NAME")
 
 def run_linker():

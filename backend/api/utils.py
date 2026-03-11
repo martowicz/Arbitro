@@ -6,7 +6,7 @@ import json
 from fastapi import HTTPException
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-DB_PATH = str(BASE_DIR / "arbitro.db")
+DB_PATH = str(BASE_DIR / "data" / "arbitro.db")
 
 # Global sync state
 SYNC_STATE = {"is_syncing": False}
@@ -28,7 +28,7 @@ def fetch_from_db(query: str, params: tuple = ()):
 def run_sync_process(scripts_to_run: list[str]):
     """
     Uniwersalna funkcja do synchronizacji. Przyjmuje listę skryptów (np. sam PZPN, 
-    sam Garmin, albo oba naraz), uruchamia je po kolei, a na koniec zawsze odpal linkera.
+    sam Garmin, albo oba naraz), uruchamia je po kolei jako moduły, a na koniec zawsze odpala linkera.
     """
     SYNC_STATE["is_syncing"] = True
     try:
@@ -36,27 +36,41 @@ def run_sync_process(scripts_to_run: list[str]):
         
         # 1. Uruchamiamy wszystkie skrypty z listy po kolei
         for script_name in scripts_to_run:
-            script_path = str(BASE_DIR / script_name)
-            print(f"⏳ Uruchamiam: {script_name}...")
+            # Usuwamy ".py" z nazwy, jeśli ktoś je przekazał (np. zamieniamy "scraper_pzpn.py" na "scraper_pzpn")
+            module_name = script_name.replace(".py", "")
             
-            result = subprocess.run([sys.executable, script_path], cwd=str(BASE_DIR), capture_output=True, text=True)
-            print(f"📝 LOGI ({script_name}):\n{result.stdout.strip()}")
+            print(f"⏳ Uruchamiam: services.{module_name}...")
+            
+            # Uruchamiamy jako moduł: python -m services.NAZWA
+            result = subprocess.run(
+                [sys.executable, "-m", f"services.{module_name}"], 
+                cwd=str(BASE_DIR), 
+                capture_output=True, 
+                text=True
+            )
+            
+            print(f"📝 LOGI ({module_name}):\n{result.stdout.strip()}")
             
             # Jeśli którykolwiek skrypt wywali błąd, przerywamy cały proces
             if result.stderr or result.returncode != 0:
-                print(f"❌ BŁĘDY ({script_name}):\n{result.stderr.strip()}")
+                print(f"❌ BŁĘDY ({module_name}):\n{result.stderr.strip()}")
                 print("🛑 Przerywam proces. Linker nie zostanie uruchomiony.")
                 return 
 
         # 2. Jeśli wszystkie skrypty przeszły bezbłędnie, odpalamy Linkera
-        linker_path = str(BASE_DIR / "linker.py")
-        print(f"🔗 === START: linker.py ===")
+        print(f"🔗 === START: services.linker ===")
         
-        result_linker = subprocess.run([sys.executable, linker_path], cwd=str(BASE_DIR), capture_output=True, text=True)
-        print(f"📝 LOGI (linker.py):\n{result_linker.stdout.strip()}")
+        result_linker = subprocess.run(
+            [sys.executable, "-m", "services.linker"], 
+            cwd=str(BASE_DIR), 
+            capture_output=True, 
+            text=True
+        )
+        
+        print(f"📝 LOGI (linker):\n{result_linker.stdout.strip()}")
         
         if result_linker.stderr:
-            print(f"❌ BŁĘDY (linker.py):\n{result_linker.stderr.strip()}")
+            print(f"❌ BŁĘDY (linker):\n{result_linker.stderr.strip()}")
             
         print(f"✅ === KONIEC SYNCHRONIZACJI ===")
         
@@ -188,7 +202,7 @@ def process_activities_to_charts(activities_info: list) -> list:
     """
     charts = []
     for act_id, title, half_num in activities_info:
-        file_path = BASE_DIR / "training_details" / f"{act_id}.json"
+        file_path = BASE_DIR / "data"/ "training_details" / f"{act_id}.json"
         
         if file_path.exists():
             labels, hr, speed = extract_garmin_data(file_path, half_number=half_num, sample_interval_sec=10)
