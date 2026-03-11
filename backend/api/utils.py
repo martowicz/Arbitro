@@ -3,6 +3,7 @@ import subprocess
 import sys
 from pathlib import Path
 import json
+from fastapi import HTTPException
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DB_PATH = str(BASE_DIR / "arbitro.db")
@@ -86,7 +87,7 @@ def format_referee_minute(mins: int, half_number: int = None) -> str:
     return str(mins + 1)
 
 
-def extract_garmin_hr_data(file_path: str, half_number: int = None, sample_interval_sec: int = 60):
+def extract_garmin_data(file_path: str, half_number: int = None, sample_interval_sec: int = 60):
     """
     Wyciąga i próbkkuje dane tętna z pliku Garmina.
     
@@ -99,23 +100,25 @@ def extract_garmin_hr_data(file_path: str, half_number: int = None, sample_inter
         with open(file_path, "r", encoding="utf-8") as f:
             raw_data = json.load(f)
     except Exception:
-        return None, None
+        return None, None, None
         
-    ts_idx, hr_idx = None, None
+    ts_idx, hr_idx, speed_idx = None, None, None
     for desc in raw_data.get("metricDescriptors", []):
         if desc.get("key") == "directTimestamp": ts_idx = desc.get("metricsIndex")
         elif desc.get("key") == "directHeartRate": hr_idx = desc.get("metricsIndex")
+        elif desc.get("key") == "directSpeed": speed_idx = desc.get("metricsIndex")
         
     metrics_list = raw_data.get("activityDetailMetrics", [])
     if not metrics_list or ts_idx is None or hr_idx is None:
-        return None, None
+        return None, None, None
         
     start_ts = metrics_list[0].get("metrics", [])[ts_idx]
     if start_ts is None:
-        return None, None
+        return None, None, None
 
     labels = []
     hr_data = []
+    speed_data = []
     last_sampled_ts = None
     
     for sample in metrics_list:
@@ -134,10 +137,125 @@ def extract_garmin_hr_data(file_path: str, half_number: int = None, sample_inter
                 
         last_sampled_ts = curr_ts
         mins = int((curr_ts - start_ts) / 60000)
+
+        raw_speed = m[speed_idx] if speed_idx is not None and len(m) > speed_idx and m[speed_idx] is not None else 0
+        speed_kmh = round(raw_speed * 3.6, 1) # Mnożnik 0.1 z Garmina * 3.6 do km/h
         
         label = format_referee_minute(mins, half_number)
         
         labels.append(label)
         hr_data.append(hr)
+        speed_data.append(speed_kmh)
             
-    return labels, hr_data
+    return labels, hr_data, speed_data
+
+
+def build_chart_dataset(title: str, labels: list, hr_data: list, speed_data: list) -> dict:
+    """Buduje gotowy słownik z danymi i wyglądem wykresu dla Chart.js"""
+    return {
+        "title": title, 
+        "chart": {
+            "labels": labels,
+            "datasets": [
+                {
+                    "label": "Tętno (bpm)",
+                    "data": hr_data,
+                    "borderColor": "#e74c3c",
+                    "backgroundColor": "rgba(231, 76, 60, 0.2)",
+                    "fill": True,
+                    "yAxisID": "heart_rate",
+                    "tension": 0.4,
+                    "pointRadius": 1
+                },
+                {
+                    "label": "Prędkość (km/h)",
+                    "data": speed_data,
+                    "borderColor": "#3498db",
+                    "backgroundColor": "transparent",
+                    "fill": True,
+                    "yAxisID": "speed",
+                    "tension": 0.4,
+                    "pointRadius": 1
+                }
+            ]
+        }
+    }
+
+def process_activities_to_charts(activities_info: list) -> list:
+    """
+    Uniwersalna funkcja generująca listę wykresów.
+    Przyjmuje listę krotek: (aktywnosc_id, tytul_wykresu, numer_polowy)
+    """
+    charts = []
+    for act_id, title, half_num in activities_info:
+        file_path = BASE_DIR / "training_details" / f"{act_id}.json"
+        
+        if file_path.exists():
+            labels, hr, speed = extract_garmin_data(file_path, half_number=half_num, sample_interval_sec=10)
+            if labels and hr:
+                charts.append(build_chart_dataset(title, labels, hr, speed))
+                
+    if not charts:
+        raise HTTPException(404, "Pliki nie istnieją lub nie zawierają danych o tętnie.")
+        
+    return charts
+
+
+# Dodaj to na dole pliku utils.py
+
+def generate_training_summary_prompt(hr_data: list, speed_data: list, sample_interval_sec: int) -> str:
+    """Kompresuje surowe dane do tekstowej pigułki dla OpenAI. - 5 minute chunks"""
+    if not hr_data:
+        return "Brak danych."
+
+    total_points = len(hr_data)
+    duration_mins = (total_points * sample_interval_sec) / 60
+
+    avg_hr = int(sum(hr_data) / total_points)
+    max_hr = max(hr_data)
+    max_speed = max(speed_data) if speed_data else 0
+
+    # Liczymy sprinty (zrywy powyżej 24 km/h)
+    sprints_count = sum(1 for s in speed_data if s >= 24)
+
+    # Dzielimy na 10-minutowe bloki
+    points_per_5_min = int((5 * 60) / sample_interval_sec)
+    chunks_text = ""
+
+    for i in range(0, total_points, points_per_5_min):
+        chunk_hr = hr_data[i:i + points_per_5_min]
+        chunk_speed = speed_data[i:i + points_per_5_min]
+
+        start_min = int((i * sample_interval_sec) / 60)
+        end_min = int(((i + len(chunk_hr)) * sample_interval_sec) / 60)
+
+        c_avg_hr = int(sum(chunk_hr) / len(chunk_hr))
+        c_max_speed = max(chunk_speed) if chunk_speed else 0
+
+        chunks_text += f"- Minuty {start_min}-{end_min}: Średnie HR: {c_avg_hr} bpm, Max Prędkość: {c_max_speed} km/h\n"
+
+    # Budujemy finalny prompt
+        prompt = f"""Jako profesjonalny trener przygotowania motorycznego sędziów piłkarskich, przeanalizuj poniższe dane wydolnościowe.
+
+        DANE WEJŚCIOWE:
+        - Czas trwania: ~{int(duration_mins)} minut
+        - Średnie tętno: {avg_hr} bpm
+        - Maksymalne tętno: {max_hr} bpm
+        - Maksymalna prędkość: {max_speed} km/h
+        - Liczba zrywów/sprintów (>24 km/h): {sprints_count}
+
+        PRZEBIEG W BLOKACH 10-MINUTOWYCH:
+        {chunks_text}
+
+        TWOJE ZADANIE:
+        Napisz zwięzłą, wysoce merytoryczną i motywującą analizę (maksymalnie 4-5 zdań).
+        Rozpoznaj typ treningu na bazie zmian tętna prędkości.
+        Jeśli czas całkowity to około 90 min lub więcej, to aktywność ta to mecz, jeśli mniej, oznacza trening. 
+        Zamiast po prostu czytać liczby, wyciągnij z nich wnioski trenera:
+        1. Zidentyfikuj główne trendy (np. relacja tętna do prędkości w czasie).
+        2. Wskaż ewentualne anomalie (niezwykłe skoki intensywności, momenty kryzysowe, nagłe spadki formy).
+        3. Oceń ogólną dyspozycję fizyczną na tle całego wysiłku.
+
+        Opieraj się wyłącznie na dostarczonych statystykach. Zwracaj się bezpośrednio do sędziego (na "Ty") z pozycji wspierającego, ale wymagającego eksperta.
+        """
+    return prompt

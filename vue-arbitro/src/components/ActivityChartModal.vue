@@ -3,7 +3,7 @@
     <div class="modal-content">
       
       <div class="modal-header">
-        <h2>❤️ Szczegóły Tętna</h2>
+        <h2>Heartrate and speed details</h2>
         <button @click="closeModal" class="close-btn">✖</button>
       </div>
 
@@ -18,6 +18,18 @@
         </div>
         <div v-else>
           <p style="text-align: center; color: red;">Brak danych do narysowania wykresu.</p>
+        </div>
+      </div>
+      <div class="ai-summary-container" v-if="loaded">
+        <div v-if="isAiLoading" class="ai-loading">
+          <span class="spinner">🤖</span> Trener AI analizuje przebieg wysiłku. Proszę czekać...
+        </div>
+        <div v-else-if="aiSummaryText" class="ai-result">
+          <h4>🧠 Analiza Trenera AI:</h4>
+          <p>{{ aiSummaryText }}</p>
+        </div>
+        <div v-else-if="aiError" class="ai-error">
+          <p>⚠️ Nie udało się pobrać analizy AI.</p>
         </div>
       </div>
       
@@ -36,6 +48,8 @@ import { Line } from 'vue-chartjs'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler)
 
+
+
 const props = defineProps({
   isOpen: Boolean,
   itemId: [String, Number],
@@ -51,14 +65,24 @@ const chartOptions = ref({
   responsive: true,
   maintainAspectRatio: false,
   scales: {
-    y: {
+    heart_rate: {
+      type: 'linear',
+      position: 'left',
       min: 60,
       max: 200,
       title: { display: true, text: 'Tętno (bpm)', color: '#e74c3c' }
+    },
+    speed: {
+      type: 'linear',
+      position: 'right',
+      min: 0,
+      max: 40, 
+      title: { display: true, text: 'Prędkość (km/h)', color: '#3498db' },
+      grid: { drawOnChartArea: false }
     }
   },
   plugins: {
-    legend: { display: false },
+    legend: { display: true, position: 'top' },
     tooltip: { mode: 'index', intersect: false }
   }
 })
@@ -89,13 +113,44 @@ const fetchChartData = async () => {
   }
 }
 
-// Ten watch reaguje na zmianę isOpen z false na true
+
+const aiSummaryText = ref('')
+const isAiLoading = ref(false)
+const aiError = ref(false)
+
+const fetchAiSummary = async () => {
+  isAiLoading.value = true
+  aiError.value = false
+  aiSummaryText.value = ''
+
+  try {
+    const endpoint = `http://127.0.0.1:8000/api/analysis/${props.itemType}/${props.itemId}`
+    const response = await fetch(endpoint)
+    
+    if (response.ok) {
+      const data = await response.json()
+      aiSummaryText.value = data.summary
+    } else {
+      aiError.value = true
+    }
+  } catch (error) {
+    console.error("Błąd pobierania AI:", error)
+    aiError.value = true
+  } finally {
+    isAiLoading.value = false
+  }
+}
+
+
 watch(() => props.isOpen, (newVal) => {
   if (newVal === true) {
     fetchChartData()
+    fetchAiSummary()
   } else {
     loaded.value = false
     chartsData.value = []
+    aiSummaryText.value = ''
+    aiError.value = false
   }
 })
 
@@ -109,7 +164,7 @@ const closeModal = () => emit('close')
   z-index: 1000; backdrop-filter: blur(4px);
 }
 .modal-content {
-  background: white; width: 90%; max-width: 1500px; border-radius: 12px;
+  background: #ffffff; width: 90%; max-width: 1500px; border-radius: 12px;
   padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
 }
 .modal-header {
@@ -125,4 +180,11 @@ const closeModal = () => emit('close')
 .chart-container { position: relative; height: 250px; width: 100%; }
 .loading-container { height: 200px; display: flex; justify-content: center; align-items: center; }
 .loading-text { font-size: 1.2em; color: #f39c12; font-weight: bold; }
+.ai-summary-container { margin-top: 20px; padding: 15px; border-radius: 8px; background: #f8f9fa; border-left: 4px solid #3498db; }
+.ai-loading { font-style: italic; color: #7f8c8d; display: flex; align-items: center; gap: 10px; }
+.spinner { display: inline-block; animation: spin 2s infinite linear; font-size: 1.2em; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.ai-result h4 { margin: 0 0 8px 0; color: #2c3e50; font-size: 1.1em; }
+.ai-result p { margin: 0; color: #34495e; line-height: 1.5; font-size: 0.95em; white-space: pre-wrap; }
+.ai-error { color: #e74c3c; font-size: 0.9em; }
 </style>
