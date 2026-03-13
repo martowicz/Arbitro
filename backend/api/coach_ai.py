@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from openai import OpenAI
 from .utils import fetch_from_db, DB_PATH, BASE_DIR
 
-router = APIRouter(prefix="/api")
+router = APIRouter(prefix="/api", tags=["Coach AI"])
 
 @router.get("/trener_ai")
 def ask_ai():

@@ -11,8 +11,7 @@ def load_garmin_to_db():
     if not os.path.exists(GARMIN_JSON_PATH):
         print(f"🛑 Błąd: Nie znaleziono pliku {GARMIN_JSON_PATH}!")
         return
-
-    # Upewniamy się, że tabele istnieją (funkcja z connection.py)
+    
     create_all_tables()
     
     conn = get_connection()
@@ -42,14 +41,15 @@ def load_garmin_to_db():
 
         try:
             cursor.execute('''
-            INSERT OR REPLACE INTO treningi 
+            INSERT OR IGNORE INTO treningi 
             (aktywnosc_id, typ, nazwa, data_startu, dystans_km, czas_min, tetno_sr, kalorie)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (aktywnosc_id, typ, nazwa, data_startu, dystans_km, czas_min, tetno_sr, kalorie))
-            licznik_zaktualizowanych += 1
+            if cursor.rowcount > 0:
+                licznik_zaktualizowanych += 1
         except Exception as e:
-            print(f"⚠️ BŁĄD ZAPISU w bazie dla '{nazwa}': {e}")
+            print(f"⚠️ Error '{nazwa}': {e}")
 
     conn.commit()
     conn.close()
-    print(f"✅ Baza zaktualizowana! Przetworzono {licznik_zaktualizowanych} treningów Garmina.")
+    print(f"✅ Garmin database is up to date! Processed {licznik_zaktualizowanych} new Garmin activities.")
