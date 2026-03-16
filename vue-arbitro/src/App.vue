@@ -18,7 +18,7 @@
                 <div v-else>
                     <div 
                         v-for="activity in paginatedActivities" 
-                        :key="activity.id || activity.tytul + activity.data"
+                        :key="activity.id || activity.title + activity.date"
                         @click="handleActivityClick(activity)"
                         style="cursor: pointer;"
                     >
@@ -59,10 +59,10 @@ const openChart = (id, type) => {
 // Obsługa kliknięcia w kafelek
 const handleActivityClick = (activity) => {
     console.log("👉 Kliknięto aktywność:", activity)
-    if (activity.mecz_id) {
-        openChart(activity.mecz_id, 'match')
-    } else if (activity.aktywnosc_id) {
-        openChart(activity.aktywnosc_id, 'training')
+    if (activity.match_id) {
+        openChart(activity.match_id, 'match')
+    } else if (activity.activity_id) {
+        openChart(activity.activity_id, 'training')
     } else {
         alert("Brak przypisanego ID Garmina dla tej aktywności.")
     }

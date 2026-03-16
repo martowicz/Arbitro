@@ -215,8 +215,6 @@ def process_activities_to_charts(activities_info: list) -> list:
     return charts
 
 
-# Dodaj to na dole pliku utils.py
-
 def generate_training_summary_prompt(hr_data: list, speed_data: list, sample_interval_sec: int) -> str:
     """Kompresuje surowe dane do tekstowej pigułki dla OpenAI. - 5 minute chunks"""
     if not hr_data:

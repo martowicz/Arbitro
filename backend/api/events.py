@@ -2,8 +2,13 @@ import os
 from datetime import datetime
 from fastapi import APIRouter
 from dotenv import load_dotenv
-from .utils import fetch_from_db, format_time
+from .utils import format_time
 from pathlib import Path
+
+from .models import Event
+from typing import List
+from db.repo_garmin import fetch_trainings_for_display
+from db.repo_matches import fetch_matches_for_display
 
 
 load_dotenv()
@@ -11,64 +16,47 @@ router = APIRouter(prefix="/api", tags=["Events"])
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-@router.get("/events")
+@router.get("/events", response_model=List[Event])
 def get_events():
     """Fetches all matched matches and unlinked trainings to build the timeline."""
     events = []
     REFEREE_NAME = os.getenv("SURNAME_NAME")
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M")
-
-    # 1. FETCH MATCHES
-    matches_query = '''
-        SELECT m.mecz_id, m.data_meczu, m.gospodarze, m.goscie, m.liga, o.rola,
-               SUM(t.dystans_km) as full_distance, SUM(t.czas_min) as full_time, 
-               ROUND(AVG(t.tetno_sr)) as average_heart_rate, SUM(t.kalorie) as full_calories
-        FROM mecze m
-        JOIN obsady o ON m.mecz_id = o.mecz_id
-        JOIN sedziowie s ON o.sedzia_id = s.id
-        LEFT JOIN treningi t ON m.mecz_id = t.mecz_id
-        WHERE s.imie_nazwisko = ?
-        GROUP BY m.mecz_id
-    '''
-    matches_data = fetch_from_db(matches_query, (REFEREE_NAME,))
+    matches_data = fetch_matches_for_display(REFEREE_NAME)
 
     for match in matches_data:
         category = "past_matches" if match['data_meczu'] < current_time else "upcoming_matches"
         
         events.append({
-            "mecz_id": match['mecz_id'],
-            "typ_wpisu": category,
-            "data": match['data_meczu'], 
-            "tytul": f"⚽ {match['gospodarze']} - {match['goscie']}",
-            "podtytul": f"{match['liga']} | {match['rola']}", 
-            "dystans": match['full_distance'], 
-            "tetno": match['average_heart_rate'], 
-            "kalorie": match['full_calories'], 
-            "sort_date": match['data_meczu'],
-            "time": format_time(match['full_time'])
-        })
+                "match_id": match['mecz_id'],
+                "entry_type": category,
+                "date": match['data_meczu'], 
+                "title": f"⚽ {match['gospodarze']} - {match['goscie']}",
+                "subtitle": f"{match['liga']} | {match['rola']}", 
+                "distance": match['full_distance'] or 0.0, 
+                "heart_rate": match['average_heart_rate'] or 0.0, 
+                "calories": match['full_calories'] or 0.0, 
+                "time": format_time(match['full_time']) if match['full_time'] else "00:00"
+            })
 
-    # 2. FETCH TRAININGS (unlinked to any matches)
-    trainings_query = 'SELECT * FROM treningi WHERE mecz_id IS NULL'
-    trainings_data = fetch_from_db(trainings_query)
+    trainings_data = fetch_trainings_for_display()
     
     for training in trainings_data:
         emoji = "🏃" if training['typ'] == "running" else "🚴" if training['typ'] == "cycling" else "💪"
 
         events.append({
-            "aktywnosc_id": training['aktywnosc_id'],
-            "typ_wpisu": "training",
-            "data": str(training['data_startu'])[:16], 
-            "tytul": f"{emoji} {training['nazwa']}",
-            "podtytul": f"Trening | ⏱️ {training['czas_min']} min", 
-            "dystans": training['dystans_km'],
-            "tetno": training['tetno_sr'], 
-            "kalorie": training['kalorie'], 
-            "sort_date": training['data_startu'],
-            "time": format_time(training['czas_min'])
-        })
+                "activity_id": training['aktywnosc_id'],
+                "entry_type": "training",
+                "date": str(training['data_startu'])[:16], 
+                "title": f"{emoji} {training['nazwa']}",
+                "subtitle": f"Trening | ⏱️ {training['czas_min']} min", 
+                "distance": training['dystans_km'],
+                "heart_rate": training['tetno_sr'], 
+                "calories": training['kalorie'], 
+                "time": format_time(training['czas_min'])
+            })
 
     #sorting by date descending
-    events.sort(key=lambda item: item['sort_date'], reverse=True)
+    events.sort(key=lambda item: item['date'], reverse=True)
 
     return events

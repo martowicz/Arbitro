@@ -68,3 +68,36 @@ def save_matches_to_db(matches):
     conn.commit()
     conn.close()
     print(f"✅ Zapisano {match_counter} nowych meczów prosto do bazy.")
+
+
+def fetch_matches_for_linker(surname_name: str):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT m.mecz_id, m.data_meczu, m.liga, m.gospodarze, m.goscie 
+        FROM mecze m
+        JOIN obsady o ON m.mecz_id = o.mecz_id
+        JOIN sedziowie s ON o.sedzia_id = s.id
+        WHERE s.imie_nazwisko = ?
+    ''', (surname_name,))
+    matches = cursor.fetchall()
+    conn.close()
+    return matches
+
+def fetch_matches_for_display(surname_name: str):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+            SELECT m.mecz_id, m.data_meczu, m.gospodarze, m.goscie, m.liga, o.rola,
+                   SUM(t.dystans_km) as full_distance, SUM(t.czas_min) as full_time, 
+                   ROUND(AVG(t.tetno_sr)) as average_heart_rate, SUM(t.kalorie) as full_calories
+            FROM mecze m
+            JOIN obsady o ON m.mecz_id = o.mecz_id
+            JOIN sedziowie s ON o.sedzia_id = s.id
+            LEFT JOIN treningi t ON m.mecz_id = t.mecz_id
+            WHERE s.imie_nazwisko = ?
+            GROUP BY m.mecz_id
+        ''', (surname_name,))
+    matches = cursor.fetchall()
+    conn.close()
+    return matches

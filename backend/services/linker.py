@@ -3,7 +3,9 @@ import dotenv
 import os
 from datetime import datetime
 from pathlib import Path
-from db.repo_linker import fetch_matches_from_db, fetch_unmatched_trainings, assign_trainings_to_matches
+from db.repo_linker import assign_trainings_to_matches
+from db.repo_matches import fetch_matches_for_linker
+from db.repo_garmin import fetch_unmatched_trainings_for_linker
 
 dotenv.load_dotenv()
 
@@ -14,8 +16,8 @@ MOJE_NAZWISKO = os.getenv("SURNAME_NAME")
 def run_linker(): 
     print("🚀 Running linker...") 
     new_links = {}  # Format: { 'aktywnosc_id': 'mecz_id' }
-    matches = fetch_matches_from_db(MOJE_NAZWISKO) 
-    unmatched_trainings = fetch_unmatched_trainings() 
+    matches = fetch_matches_for_linker(MOJE_NAZWISKO) 
+    unmatched_trainings = fetch_unmatched_trainings_for_linker() 
 
     for match in matches: 
         try: 

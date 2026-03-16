@@ -2,22 +2,22 @@
   <div class="activity-card" :style="{ backgroundColor: styles.cardBg }">
       <div class="activity-header">
           <div>
-              <div class="activity-title">{{ activity.tytul }}</div>
-              <div class="activity-date">{{ activity.data }}</div>
+              <div class="activity-title">{{ activity.title }}</div>
+              <div class="activity-date">{{ activity.date }}</div>
           </div>
       </div>
       
       <div class="activity-stats">
           <div class="stat-item">
-              <div class="stat-value">🏃 {{ activity.dystans ? parseFloat(activity.dystans).toFixed(2) + ' km' : 'Brak' }}</div>
+              <div class="stat-value">🏃 {{ activity.distance ? parseFloat(activity.distance).toFixed(2) + ' km' : 'Brak' }}</div>
               <div class="stat-label">Dystans</div>
           </div>
           <div class="stat-item">
-              <div class="stat-value">❤️ {{ activity.tetno ? activity.tetno + ' bpm' : 'Brak' }}</div>
+              <div class="stat-value">❤️ {{ activity.heart_rate ? activity.heart_rate + ' bpm' : 'Brak' }}</div>
               <div class="stat-label">Śr. Tętno</div>
           </div>
           <div class="stat-item">
-              <div class="stat-value">🔥 {{ activity.kalorie ? activity.kalorie + ' kcal' : 'Brak' }}</div>
+              <div class="stat-value">🔥 {{ activity.calories ? activity.calories + ' kcal' : 'Brak' }}</div>
               <div class="stat-label">Kalorie</div>
           </div>
           <div class="stat-item">
@@ -37,7 +37,7 @@ const props = defineProps({
 })
 
 const styles = computed(() => {
-  const typ = props.activity.typ_wpisu;
+  const typ = props.activity.entry_type;
   if (typ === 'past_matches'){ 
     return {cardBg: 'var(--past-match-bg-color)',  
             badgeBg: 'var(--past-match-bg-color)', 

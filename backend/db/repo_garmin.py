@@ -53,3 +53,19 @@ def load_garmin_to_db():
     conn.commit()
     conn.close()
     print(f"✅ Garmin database is up to date! Processed {licznik_zaktualizowanych} new Garmin activities.")
+
+def fetch_unmatched_trainings_for_linker():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT aktywnosc_id, data_startu FROM treningi WHERE mecz_ID IS NULL")
+    unmatched_trainings = cursor.fetchall()
+    conn.close()
+    return unmatched_trainings
+
+def fetch_trainings_for_display():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM treningi WHERE mecz_ID IS NULL")
+    trainings = cursor.fetchall()
+    conn.close()
+    return trainings

@@ -1,14 +1,16 @@
 from fastapi import APIRouter, HTTPException
-from .utils import fetch_from_db, process_activities_to_charts, generate_training_summary_prompt, extract_garmin_data
+from .utils import process_activities_to_charts, generate_training_summary_prompt, extract_garmin_data, fetch_from_db
 from openai import OpenAI
 from pathlib import Path
+from .models import AIAnalysisResponse, ChartResponseItem
+from typing import List
 
 router = APIRouter(prefix="/api", tags=["Charts"])
 client = OpenAI()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-@router.get("/matches/{mecz_id}/chart_data")
+@router.get("/matches/{mecz_id}/chart_data", response_model=List[ChartResponseItem])
 def get_match_chart_data(mecz_id: str):
     query = "SELECT aktywnosc_id FROM treningi WHERE mecz_id = ? ORDER BY data_startu ASC"
     results = fetch_from_db(query, (mecz_id,))
@@ -21,14 +23,14 @@ def get_match_chart_data(mecz_id: str):
     return process_activities_to_charts(tasks)
 
 
-@router.get("/trainings/{aktywnosc_id}/chart_data")
+@router.get("/trainings/{aktywnosc_id}/chart_data", response_model=List[ChartResponseItem])
 def get_training_chart_data(aktywnosc_id: str):
     #one training session to built a chart for
     tasks = [(aktywnosc_id, "Dane treningu", None)]
     
     return process_activities_to_charts(tasks)
 
-@router.get("/analysis/{item_type}/{item_id}")
+@router.get("/analysis/{item_type}/{item_id}", response_model=AIAnalysisResponse)
 def get_ai_analysis(item_type: str, item_id: str):
     activities_to_analyze = []
     
@@ -41,7 +43,6 @@ def get_ai_analysis(item_type: str, item_id: str):
     else:
         activities_to_analyze = [item_id]
 
-    # 2. Sklejamy dane ze wszystkich plików
     all_hr = []
     all_speed = []
     sample_interval = 10 # Musi być taki sam jak dla wykresów!
