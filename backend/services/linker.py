@@ -6,12 +6,12 @@ from pathlib import Path
 from db.repo_linker import assign_trainings_to_matches
 from db.repo_matches import fetch_matches_for_linker
 from db.repo_garmin import fetch_unmatched_trainings_for_linker
+from db.repo_settings import get_setting
 
-dotenv.load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DB_PATH = str(BASE_DIR / "data" / "arbitro.db")
-MOJE_NAZWISKO = os.getenv("SURNAME_NAME")
+MOJE_NAZWISKO = get_setting("surname_name")
 
 def run_linker(): 
     print("🚀 Running linker...") 

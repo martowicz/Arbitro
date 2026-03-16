@@ -14,13 +14,22 @@ CURRENT_SEASON = "2025/2026"
 def save_season_to_json(season, new_matches):
     """Zapisuje dane do pliku JSON w folderze match_data."""
     if not new_matches: return
+    
+    # 1. Definiujemy docelowy folder z użyciem Pathlib
     target_folder = BASE_DIR / "data" / "match_data"
-    os.makedirs('match_data', exist_ok=True)
+    
+    # 2. Tworzymy folder WRAZ ze wszystkimi folderami nadrzędnymi (jeśli nie istnieją)
+    target_folder.mkdir(parents=True, exist_ok=True)
+    
     file_name = target_folder / f"season_{season.replace('/', '_')}.json"
     old_data = []
-    if os.path.exists(file_name):
+    
+    if file_name.exists():
         with open(file_name, 'r', encoding='utf-8') as f:
-            old_data = json.load(f)
+            try:
+                old_data = json.load(f)
+            except json.JSONDecodeError:
+                old_data = []
             
     old_data.extend(new_matches)
     with open(file_name, 'w', encoding='utf-8') as f:
@@ -69,6 +78,7 @@ def scrape_arbitro(current_season, is_new_user, known_ids=None, known_signatures
         browser = p.chromium.launch(headless=False) 
         context = browser.new_context()
         page = context.new_page()
+        
         encrypted_email = get_setting("pzpn_email")
         encrypted_password = get_setting("pzpn_password")
 
@@ -163,6 +173,7 @@ def scrape_arbitro(current_season, is_new_user, known_ids=None, known_signatures
                 except Exception as e:
                     print(f"    ❌ Błąd dla {match['gospodarze']} vs {match['goscie']}: {e}")
             
+            # Zapis wywołany po zebraniu wszystkich szczegółów!
             save_season_to_json(current_season, all_new_matches)
 
         print(f"\n🎉 ZAKOŃCZONO! Zabrano {len(all_new_matches)} nowych meczów.")

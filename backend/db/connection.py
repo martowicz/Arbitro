@@ -1,11 +1,13 @@
 import sqlite3
 from pathlib import Path
+import os
 
 # Ścieżki wyliczane raz, poprawnie dla całego projektu
 BASE_DIR = Path(__file__).resolve().parent.parent
 DB_PATH = str(BASE_DIR / "data" / "arbitro.db")
 
 def get_connection() -> sqlite3.Connection:
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     """Zwraca aktywne połączenie z bazą danych SQLite. Zawsze używaj tej funkcji!"""
     # check_same_thread=False jest przydatne dla FastAPI
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
