@@ -1,15 +1,15 @@
 import os
 import json
 import time
-from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright
 from pathlib import Path
 # <--- IMPORTY Z BAZY:
 from db.repo_matches import load_known_data, save_matches_to_db
+from db.repo_settings import get_setting
+from core.security import decrypt_data
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv()
-CURRENT_SEASON = os.getenv("CURRENT_SEASON")
+CURRENT_SEASON = "2025/2026"
 
 def save_season_to_json(season, new_matches):
     """Zapisuje dane do pliku JSON w folderze match_data."""
@@ -69,11 +69,21 @@ def scrape_arbitro(current_season, is_new_user, known_ids=None, known_signatures
         browser = p.chromium.launch(headless=False) 
         context = browser.new_context()
         page = context.new_page()
+        encrypted_email = get_setting("pzpn_email")
+        encrypted_password = get_setting("pzpn_password")
+
+        if not encrypted_email or not encrypted_password:
+            print("❌ Błąd: Brak danych logowania do PZPN w bazie! Uzupełnij je w panelu ustawień.")
+            browser.close()
+            return
+        
+        pzpn_email = decrypt_data(encrypted_email)
+        pzpn_password = decrypt_data(encrypted_password)
 
         print("🚀 Automatyczne logowanie do PZPN24...")
         page.goto("https://pzpn24.pzpn.pl/Login")
-        page.fill("input#username", os.getenv("PZPN_EMAIL"))
-        page.fill("input#password", os.getenv("PZPN_PASS"))
+        page.fill("input#username", pzpn_email)
+        page.fill("input#password", pzpn_password)
         page.click("input#kc-login")
         
         try:

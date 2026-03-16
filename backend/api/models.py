@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Literal, Union, List
+from typing import Literal, Union, List, Optional
 
 class EventBase(BaseModel):
     date: str
@@ -40,4 +40,14 @@ class ChartDetails(BaseModel):
 class ChartResponseItem(BaseModel):
     title: str
     chart: ChartDetails
+
+class SettingsInput(BaseModel):
+    pzpn_email: Optional[str] = None
+    pzpn_password: Optional[str] = None
+    garmin_email: Optional[str] = None
+    garmin_password: Optional[str] = None
+    openai_api_key: Optional[str] = None
+    surname_name: Optional[str] = None
+    
+
 

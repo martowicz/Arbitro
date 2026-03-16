@@ -1,24 +1,30 @@
 import os
 import json
-from dotenv import load_dotenv
+
 from garminconnect import Garmin
 from pathlib import Path
 from db.repo_garmin import load_garmin_to_db
+from db.repo_settings import get_setting
+from core.security import decrypt_data
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(dotenv_path=BASE_DIR / ".env")
 
 def scrape_garmin():
-    email = os.getenv("GARMIN_EMAIL")
-    haslo = os.getenv("GARMIN_PASSWORD")
+    print("🔐 Pobieranie i deszyfrowanie poświadczeń do Garmina z sejfu...")
+    encrypted_garmin_email = get_setting("garmin_email")
+    encrypted_garmin_password = get_setting("garmin_password")
     
-    if not email or not haslo:
-        print("🛑 Błąd: Brak danych logowania do Garmina w pliku .env!")
+    if not encrypted_garmin_email or not encrypted_garmin_password:
+        print("🛑 Błąd: Brak danych logowania do Garmina w bazie! Uzupełnij je w panelu ustawień.")
         return
+
+    garmin_email = decrypt_data(encrypted_garmin_email)
+    garmin_password = decrypt_data(encrypted_garmin_password)
+    
 
     try:
         print("⏳ Łączenie z serwerami Garmin Connect...")
-        klient = Garmin(email, haslo)
+        klient = Garmin(garmin_email, garmin_password)
         klient.login()
         print("✅ Zalogowano pomyślnie!\n")
 

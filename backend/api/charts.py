@@ -4,9 +4,10 @@ from openai import OpenAI
 from pathlib import Path
 from .models import AIAnalysisResponse, ChartResponseItem
 from typing import List
+from db.repo_settings import get_setting
+from core.security import decrypt_data
 
 router = APIRouter(prefix="/api", tags=["Charts"])
-client = OpenAI()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -32,6 +33,13 @@ def get_training_chart_data(aktywnosc_id: str):
 
 @router.get("/analysis/{item_type}/{item_id}", response_model=AIAnalysisResponse)
 def get_ai_analysis(item_type: str, item_id: str):
+
+    encrypted_openai_api_key = get_setting("openai_api_key")
+    if not encrypted_openai_api_key: return HTTPException(status_code=400, detail="OpenAI API key not found")
+
+    clean_key = decrypt_data(encrypted_openai_api_key)
+    client = OpenAI(api_key=clean_key)
+
     activities_to_analyze = []
     
     # 1. Zbieramy ID aktywności (jedna dla treningu, dwie dla meczu)

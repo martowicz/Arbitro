@@ -9,7 +9,7 @@ from .models import Event
 from typing import List
 from db.repo_garmin import fetch_trainings_for_display
 from db.repo_matches import fetch_matches_for_display
-
+from db.repo_settings import get_setting
 
 load_dotenv()
 router = APIRouter(prefix="/api", tags=["Events"])
@@ -20,7 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 def get_events():
     """Fetches all matched matches and unlinked trainings to build the timeline."""
     events = []
-    REFEREE_NAME = os.getenv("SURNAME_NAME")
+    REFEREE_NAME = get_setting("surname_name")
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M")
     matches_data = fetch_matches_for_display(REFEREE_NAME)
 

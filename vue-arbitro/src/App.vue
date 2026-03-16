@@ -3,37 +3,36 @@
     <SyncManager @data-updated="fetchActivities" />
 
     <div class="container">
-        <div style="display: flex; gap: 30px; align-items: flex-start;">
-            
-            <div style="flex: 1;">
-                <Pagination 
-                :currentPage="currentPage" 
-                :totalPages="totalPages" 
-                @changePage="handlePageChange" 
-                />
+      <div style="display: flex; gap: 30px; align-items: flex-start;">
+        <div style="flex: 1;">
+          <Pagination 
+            :currentPage="currentPage" 
+            :totalPages="totalPages" 
+            @changePage="handlePageChange" 
+          />
 
-                <p v-if="isLoadingActivities" style="text-align: center;">⏳ Ładowanie historii...</p>
-                <p v-else-if="activities.length === 0" style="text-align: center;">Brak aktywności.</p>
-                
-                <div v-else>
-                    <div 
-                        v-for="activity in paginatedActivities" 
-                        :key="activity.id || activity.title + activity.date"
-                        @click="handleActivityClick(activity)"
-                        style="cursor: pointer;"
-                    >
-                        <Activity :activity="activity" />
-                    </div>
-                </div>
+          <p v-if="isLoadingActivities" style="text-align: center;">⏳ Ładowanie historii...</p>
+          <p v-else-if="activities.length === 0" style="text-align: center;">Brak aktywności.</p>
+          
+          <div v-else>
+            <div 
+              v-for="activity in paginatedActivities" 
+              :key="activity.match_id || activity.activity_id || activity.title + activity.date"
+              @click="handleActivityClick(activity)"
+              style="cursor: pointer;"
+            >
+              <Activity :activity="activity" />
             </div>
-        </div> 
+          </div>
+        </div>
+      </div> 
     </div>
     
     <ActivityChartModal 
-        :isOpen="isModalOpen" 
-        :itemId="selectedItemId" 
-        :itemType="selectedItemType"
-        @close="isModalOpen = false"
+      :isOpen="isModalOpen" 
+      :itemId="selectedItemId" 
+      :itemType="selectedItemType"
+      @close="isModalOpen = false"
     />
   </div>
 </template>
@@ -44,16 +43,18 @@ import SyncManager from './components/SyncManager.vue'
 import Activity from './components/Activity.vue'
 import ActivityChartModal from './components/ActivityChartModal.vue'
 import Pagination from './components/Pagination.vue'
+// 🗑️ Usunięto import Settings.vue
 
 // Zmienne do Modala
 const isModalOpen = ref(false)
 const selectedItemId = ref(null)
 const selectedItemType = ref(null)
+// 🗑️ Usunięto showSettings
 
 const openChart = (id, type) => {
   selectedItemId.value = id
   selectedItemType.value = type
-  isModalOpen.value = true // TO OTWIERA MODAL!
+  isModalOpen.value = true 
 }
 
 // Obsługa kliknięcia w kafelek
@@ -83,8 +84,9 @@ const paginatedActivities = computed(() => {
 
 const handlePageChange = (newPage) => {
   currentPage.value = newPage
-  window.scrollTo({ top: 0, behavior: 'smooth' }) // Gładki powrót na górę listy!
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
+
 const fetchActivities = async () => {
     isLoadingActivities.value = true
     try {

@@ -54,9 +54,9 @@ def create_all_tables():
 
     # Nasza NOWA Tabela do Etapu 2 (Szyfrowanie AES)
     cursor.execute('''
-    CREATE TABLE IF NOT EXISTS ustawienia (
-        klucz TEXT PRIMARY KEY,
-        wartosc TEXT
+    CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT
     )
     ''')
 

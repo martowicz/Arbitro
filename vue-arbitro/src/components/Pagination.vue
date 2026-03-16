@@ -86,6 +86,6 @@ defineEmits(['changePage'])
 
 .page-info {
   font-weight: 500;
-  color: #555;
+  color: #d8d8d8;
 }
 </style>
