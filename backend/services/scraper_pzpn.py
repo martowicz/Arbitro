@@ -3,22 +3,22 @@ import json
 import time
 from playwright.sync_api import sync_playwright
 from pathlib import Path
-# <--- IMPORTY Z BAZY:
+from concurrent.futures import ThreadPoolExecutor
+
+
 from db.repo_matches import load_known_data, save_matches_to_db
 from db.repo_settings import get_setting
 from core.security import decrypt_data
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 CURRENT_SEASON = "2025/2026"
+SESSION_FILE = BASE_DIR / "data" / ".pzpn_session.json"
 
 def save_season_to_json(season, new_matches):
     """Zapisuje dane do pliku JSON w folderze match_data."""
     if not new_matches: return
     
-    # 1. Definiujemy docelowy folder z użyciem Pathlib
     target_folder = BASE_DIR / "data" / "match_data"
-    
-    # 2. Tworzymy folder WRAZ ze wszystkimi folderami nadrzędnymi (jeśli nie istnieją)
     target_folder.mkdir(parents=True, exist_ok=True)
     
     file_name = target_folder / f"season_{season.replace('/', '_')}.json"
@@ -66,6 +66,42 @@ def extract_table_data(page, season, round_name, known_ids, known_signatures):
             
     return new_matches
 
+def fetch_single_match_details(match):
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        
+        context = browser.new_context(storage_state=str(SESSION_FILE))
+        page = context.new_page()
+        
+        try:
+            page.goto(match["szczegoly_url"])
+            page.wait_for_load_state("networkidle")
+            
+            referees_link = page.locator('a[href="#obsada"]')
+            if referees_link.is_visible():
+                referees_link.click()
+                time.sleep(0.5) 
+                
+                referees_details = {}
+                referee_blocks = page.locator("#obsada .panel-default").all()
+                for block in referee_blocks:
+                    role = block.locator(".panel-heading").inner_text().strip()
+                    name_input = block.locator("input[id$='_Nazwa']")
+                    if name_input.count() == 0:
+                        name_input = block.locator("input[type='text']").first
+                    if name_input.is_visible():
+                        full_name = name_input.input_value().strip()
+                        if full_name:
+                            referees_details[role] = full_name
+                match["obsada"] = referees_details
+            print(f"    ✔️ [Wątek] Pomyślnie pobrano obsadę: {match['gospodarze']} vs {match['goscie']}")
+        except Exception as e:
+            print(f"    ❌ [Wątek] Błąd dla {match['gospodarze']} vs {match['goscie']}: {e}")
+        finally:
+            browser.close()
+            
+    return match
+
 def scrape_arbitro(current_season, is_new_user, known_ids=None, known_signatures=None):
     known_ids = known_ids or set()
     known_signatures = known_signatures or set()
@@ -74,6 +110,9 @@ def scrape_arbitro(current_season, is_new_user, known_ids=None, known_signatures
     if is_new_user: print(f"🆕 WYKRYTO NOWEGO UŻYTKOWNIKA. Rozpoczynam pełne pobieranie dla sezonu {current_season}...")
     else: print(f"🔄 ZNANY UŻYTKOWNIK. Szukam tylko nowych meczów dla sezonu {current_season}...")
 
+    # ========================================================
+    # FAZA 1: GŁÓWNY WĄTEK - LOGOWANIE I ZBIERANIE LINKÓW
+    # ========================================================
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False) 
         context = browser.new_context()
@@ -85,7 +124,7 @@ def scrape_arbitro(current_season, is_new_user, known_ids=None, known_signatures
         if not encrypted_email or not encrypted_password:
             print("❌ Błąd: Brak danych logowania do PZPN w bazie! Uzupełnij je w panelu ustawień.")
             browser.close()
-            return
+            return []
         
         pzpn_email = decrypt_data(encrypted_email)
         pzpn_password = decrypt_data(encrypted_password)
@@ -104,7 +143,8 @@ def scrape_arbitro(current_season, is_new_user, known_ids=None, known_signatures
             print("🍪 Baner cookies nie wyskoczył. Lecimy dalej.")
         
         page.wait_for_load_state("networkidle")
-        print("✅ Logowanie zakończone (oczekiwanie na załadowanie panelu).")
+        print("✅ Logowanie zakończone.")
+        
         user_menu = page.locator(".navbar-right .dropdown-toggle").first
         if user_menu.is_visible() and "SĘDZIA" not in user_menu.inner_text().upper():
             print(f"   🔄 Przełączam na profil Sędziego...")
@@ -115,6 +155,9 @@ def scrape_arbitro(current_season, is_new_user, known_ids=None, known_signatures
                 referee_option.click()
                 page.wait_for_load_state("networkidle")
                 time.sleep(1)
+
+        
+        context.storage_state(path=str(SESSION_FILE))
 
         page.get_by_role("link", name="Judge", exact=False).click()
         page.wait_for_timeout(500)
@@ -143,42 +186,35 @@ def scrape_arbitro(current_season, is_new_user, known_ids=None, known_signatures
                     continue
                 break
 
-        if not all_new_matches:
-            print(f"  ✅ Brak nowych meczów w sezonie {current_season}.")
-        else:
-            print(f"  🔍 Wchodzę w szczegóły {len(all_new_matches)} NOWYCH meczów...")
-            for match in all_new_matches:
-                try:
-                    page.goto(match["szczegoly_url"])
-                    page.wait_for_load_state("networkidle")
-                    
-                    referees_link = page.locator('a[href="#obsada"]')
-                    if referees_link.is_visible():
-                        referees_link.click()
-                        time.sleep(0.5) 
-                        
-                        referees_details = {}
-                        referee_blocks = page.locator("#obsada .panel-default").all()
-                        for block in referee_blocks:
-                            role = block.locator(".panel-heading").inner_text().strip()
-                            name_input = block.locator("input[id$='_Nazwa']")
-                            if name_input.count() == 0:
-                                name_input = block.locator("input[type='text']").first
-                            if name_input.is_visible():
-                                full_name = name_input.input_value().strip()
-                                if full_name:
-                                    referees_details[role] = full_name
-                        match["obsada"] = referees_details
-                    print(f"    ✔️ Pomyślnie pobrano obsadę: {match['gospodarze']} vs {match['goscie']}")
-                except Exception as e:
-                    print(f"    ❌ Błąd dla {match['gospodarze']} vs {match['goscie']}: {e}")
-            
-            # Zapis wywołany po zebraniu wszystkich szczegółów!
-            save_season_to_json(current_season, all_new_matches)
-
-        print(f"\n🎉 ZAKOŃCZONO! Zabrano {len(all_new_matches)} nowych meczów.")
         browser.close()
-        return all_new_matches
+
+    
+    # Mutlithreading
+    
+    if not all_new_matches:
+        print(f"  ✅ Brak nowych meczów w sezonie {current_season}.")
+        if SESSION_FILE.exists(): SESSION_FILE.unlink() # Sprzątanie pliku sesji
+        return []
+
+    print(f"\n⚡ Odpalam {min(4, len(all_new_matches))} wątków do pobrania szczegółów {len(all_new_matches)} meczów...")
+    
+    final_matches = []
+    try:
+        # Używamy ThreadPoolExecutor - maksymalnie 4 przeglądarki jednocześnie
+        with ThreadPoolExecutor(max_workers=4) as executor:
+            # Funkcja executor.map rozdziela mecze do wolnych workerów
+            results = executor.map(fetch_single_match_details, all_new_matches)
+            final_matches = list(results)
+    finally:
+        # SPRZĄTANIE: Niezależnie co się stanie, kasujemy plik sesyjny ze względów bezpieczeństwa
+        if SESSION_FILE.exists():
+            SESSION_FILE.unlink()
+            print("🧹 Wyczyszczono pliki sesyjne.")
+
+    save_season_to_json(current_season, final_matches)
+
+    print(f"\n🎉 ZAKOŃCZONO! Zabrano {len(final_matches)} nowych meczów.")
+    return final_matches
 
 def run_scraper(current_season=CURRENT_SEASON):
     print(f"⚽ ARBITRO SYSTEM START - Sezon {current_season}")
