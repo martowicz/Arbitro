@@ -27,7 +27,6 @@ def load_known_data():
     return known_ids, known_signatures
 
 def save_matches_to_db(matches):
-    """Bierze pobrane mecze (z RAM-u) i wrzuca je bezpiecznie do SQLite."""
     if not matches:
         return
 
@@ -43,8 +42,10 @@ def save_matches_to_db(matches):
         if not match_id:
             continue
 
+        # ZMIANA: INSERT OR REPLACE zamiast OR IGNORE
+        # Dzięki temu, jeśli mecz był pusty, a teraz ma wynik/dane, to go zaktualizujemy
         cursor.execute('''
-        INSERT OR IGNORE INTO mecze 
+        INSERT OR REPLACE INTO mecze 
         (mecz_id, sezon, runda, liga, kolejka, data_meczu, gospodarze, goscie, wynik)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
@@ -53,11 +54,17 @@ def save_matches_to_db(matches):
             match.get('goscie'), match.get('wynik')
         ))
 
+        # Zapisywanie obsady
         referees = match.get('obsada', {})
-        if isinstance(referees, dict):
+        print(f"💾 Próbuję zapisać obsadę dla meczu {match_id}: {referees}") # DODAJ TO
+        if isinstance(referees, dict) and referees:
             for role, full_name in referees.items():
-                if full_name and full_name != "Błąd":
+                print(f"👤 Sędzia: {full_name} (Rola: {role})") # DODAJ TO
+                if full_name and full_name not in ["Błąd", ""]:
                     referee_id = get_referee_id(cursor, full_name)
+                    print(f"🆔 Otrzymane referee_id: {referee_id}") # DODAJ TO
+                    
+                    # Tutaj zostawiamy OR IGNORE, żeby nie dublować sędziów w tym samym meczu
                     cursor.execute('''
                     INSERT OR IGNORE INTO obsady (mecz_id, sedzia_id, rola)
                     VALUES (?, ?, ?)
@@ -67,8 +74,7 @@ def save_matches_to_db(matches):
 
     conn.commit()
     conn.close()
-    print(f"✅ Zapisano {match_counter} nowych meczów prosto do bazy.")
-
+    print(f"✅ Zaktualizowano/Zapisano {match_counter} meczów i ich obsady.")
 
 def fetch_matches_for_linker(surname_name: str):
     conn = get_connection()

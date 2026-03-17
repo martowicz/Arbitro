@@ -3,7 +3,7 @@ from cryptography.fernet import Fernet
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-KEY_FILE = BASE_DIR / "secret.key"
+KEY_FILE = BASE_DIR / "data" / "secret.key"
 
 
 def get_master_key() -> bytes:

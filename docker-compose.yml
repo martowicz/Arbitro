@@ -1,0 +1,30 @@
+
+services:
+  # --- BACKEND (FastAPI + Playwright) ---
+  backend:
+    build: ./backend
+    container_name: arbitro_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./backend/data:/app/data  # Tutaj trzymasz arbitro.db i secret.key
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DOCKER_MODE=true
+    restart: always
+
+  # --- FRONTEND (Vue.js + Vite) ---
+  frontend:
+    build: ./vue-arbitro
+    container_name: arbitro_frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./vue-arbitro:/app
+      - /app/node_modules # Ważne: izoluje node_modules kontenera od hosta
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    restart: always

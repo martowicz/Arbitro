@@ -14,6 +14,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 CURRENT_SEASON = "2025/2026"
 SESSION_FILE = BASE_DIR / "data" / ".pzpn_session.json"
 
+
+def ensure_logged_in(page):
+    if "login" in page.url or "authenticate" in page.url:
+        print("❌ SESJA PADŁA - wróciłeś do logowania")
+        return False
+    return True
+
 def save_season_to_json(season, new_matches):
     """Zapisuje dane do pliku JSON w folderze match_data."""
     if not new_matches: return
@@ -76,6 +83,17 @@ def fetch_single_match_details(match):
         try:
             page.goto(match["szczegoly_url"])
             page.wait_for_load_state("networkidle")
+
+            page.evaluate("""
+            const removeRODO = () => {
+                const shadowHost = document.getElementById('usercentrics-root');
+                if (shadowHost) shadowHost.remove();
+                const overlays = document.querySelectorAll('.uc-overlay, .uc-container');
+                overlays.forEach(el => el.remove());
+                document.body.style.overflow = 'auto';
+            };
+            removeRODO();
+            """)
             
             referees_link = page.locator('a[href="#obsada"]')
             if referees_link.is_visible():
@@ -114,8 +132,21 @@ def scrape_arbitro(current_season, is_new_user, known_ids=None, known_signatures
     # FAZA 1: GŁÓWNY WĄTEK - LOGOWANIE I ZBIERANIE LINKÓW
     # ========================================================
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False) 
-        context = browser.new_context()
+        browser = p.chromium.launch(
+            headless=True,
+            args=[
+                "--disable-blink-features=AutomationControlled", # Ukrywa navigator.webdriver
+                "--no-sandbox",
+                "--disable-setuid-sandbox"
+            ]
+        )
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            viewport={'width': 1920, 'height': 1080},
+            java_script_enabled=True,
+            locale="pl-PL",
+            timezone_id="Europe/Warsaw"
+        )
         page = context.new_page()
         
         encrypted_email = get_setting("pzpn_email")
@@ -131,37 +162,86 @@ def scrape_arbitro(current_season, is_new_user, known_ids=None, known_signatures
 
         print("🚀 Automatyczne logowanie do PZPN24...")
         page.goto("https://pzpn24.pzpn.pl/Login")
+        time.sleep(2) # Poczekaj aż strona "osiądzie"
         page.fill("input#username", pzpn_email)
+        time.sleep(1)
         page.fill("input#password", pzpn_password)
+        time.sleep(1)
         page.click("input#kc-login")
+        # --- NOWA LOGIKA OBSŁUGI RODO ---
+        page.wait_for_load_state("load")
+        time.sleep(3) # Daj serwerowi PZPN odetchnąć po logowaniu
+
+        print("🛡️ Neutralizuję baner RODO...")
+        page.evaluate("""
+            const shadowHost = document.getElementById('usercentrics-root');
+            if (shadowHost) shadowHost.remove();
+            document.body.style.overflow = 'auto';
+        """)
         
-        try:
-            print("🍪 Sprawdzam baner cookies...")
-            page.click("button[data-testid='uc-accept-all-button']", timeout=5000)
-            print("🍪 Ciasteczka zaakceptowane!")
-        except:
-            print("🍪 Baner cookies nie wyskoczył. Lecimy dalej.")
-        
+        # --- KONIEC POPRAWKI ---
+
         page.wait_for_load_state("networkidle")
-        print("✅ Logowanie zakończone.")
-        
-        user_menu = page.locator(".navbar-right .dropdown-toggle").first
-        if user_menu.is_visible() and "SĘDZIA" not in user_menu.inner_text().upper():
-            print(f"   🔄 Przełączam na profil Sędziego...")
-            user_menu.click()
-            time.sleep(1)
-            referee_option = page.locator(".navbar-right .dropdown-menu a", has_text="- Sędzia").first
-            if referee_option.is_visible():
-                referee_option.click()
-                page.wait_for_load_state("networkidle")
-                time.sleep(1)
+        page.wait_for_timeout(3000)
 
-        
+        if not ensure_logged_in(page):
+            print("❌ Logowanie NIE powiodło się poprawnie")
+            browser.close()
+            return []
+            
+        print("✅ Logowanie zakończone (zweryfikowane).")
+
+        print("💾 Zapisuję sesję do pliku...")
+        # Upewnij się, że folder data istnieje!
+        SESSION_FILE.parent.mkdir(parents=True, exist_ok=True)
         context.storage_state(path=str(SESSION_FILE))
+        print(f"✅ Plik sesji zapisany pod: {SESSION_FILE}")
+        
+        current_profile_text = page.locator(".navbar-right .dropdown-toggle").first.inner_text().upper()
+        
+        if "SĘDZIA" not in current_profile_text:
+            print("🔄 Jesteśmy na Profilu Podstawowym. Przełączam na konto Sędziego...")
+            
+            # Otwórz menu wyboru konta
+            page.locator(".navbar-right .dropdown-toggle").first.click()
+            page.wait_for_timeout(1000)
+            
+            # Szukamy linku, który zawiera "ZmienKonto" i ma w tekście "Sędzia"
+            referee_link = page.locator("a[href*='ZmienKonto']", has_text="Sędzia").first
+            
+            if referee_link.count() > 0:
+                referee_link.click()
+                print("✅ Kliknięto zmianę konta na Sędzia.")
+                page.wait_for_load_state("networkidle")
+                time.sleep(2)
+            else:
+                print("⚠️ Nie znaleziono linku do konta sędziego w menu!")
+                # Jeśli linku nie ma w menu, spróbujmy wejść w niego bezpośrednio (z Twoich logów)
+                # Ale lepiej użyć uniwersalnego locatora powyżej.
 
-        page.get_by_role("link", name="Judge", exact=False).click()
-        page.wait_for_timeout(500)
-        page.click('a[href="/Ogolne/Obsady"]')
+        # PRZED KLIKNIĘCIEM W "JUDGE" DODAJ JESZCZE TO:
+        # Czasami baner odświeża się po przełączeniu profilu.
+        page.evaluate('document.getElementById("usercentrics-root")?.remove()')
+
+
+        page.screenshot(path="debug_before_click.png", full_page=True)
+        print(page.url)
+        print(page.title())
+        print(page.content()[:5000]) 
+        print("\n🔗 LISTA LINKÓW:")
+        links = page.locator("a")
+
+
+        print("\n🔎 SZUKAM LINKU DO OBSADY...")
+
+        obsady_link = page.locator("a[href*='Obsady']").first
+
+        if obsady_link.count() == 0:
+            print("❌ NIE ZNALEZIONO linku do Obsady")
+            browser.close()
+            return []
+
+        page.goto("https://pzpn24.pzpn.pl/Ogolne/Obsady")
         page.wait_for_load_state("networkidle")
 
         page.select_option("#SezonFiltr", current_season)
@@ -179,10 +259,13 @@ def scrape_arbitro(current_season, is_new_user, known_ids=None, known_signatures
                 new_on_page = extract_table_data(page, current_season, round_name, known_ids, known_signatures)
                 all_new_matches.extend(new_on_page)
                 
+                page.evaluate('document.getElementById("usercentrics-root")?.remove()')
+
                 next_btn = page.locator("#spotkania_tabela_next")
                 if next_btn.is_visible() and "disabled" not in (next_btn.get_attribute("class") or ""):
-                    next_btn.click()
-                    time.sleep(1)
+                    # Używamy force=True, żeby przebić się przez ewentualne niewidoczne warstwy
+                    next_btn.click(force=True) 
+                    time.sleep(1.5) # Daj tabeli czas na przeładowanie danych
                     continue
                 break
 
@@ -231,6 +314,8 @@ def run_scraper(current_season=CURRENT_SEASON):
     
     if new_matches:
         print(f"📥 Rozpoczynam zapisywanie pobranych danych do bazy SQLite...")
+        for m in new_matches[:3]: # Sprawdźmy tylko pierwsze 3
+            print(f"DEBUG: Mecz {m['gospodarze']} ma obsadę: {m.get('obsada')}")
         save_matches_to_db(new_matches)
     else:
         print("👍 Wszystko jest aktualne, brak nowych meczów do dodania do bazy.")

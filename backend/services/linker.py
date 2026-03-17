@@ -26,7 +26,6 @@ def find_links(matches, unmatched_trainings):
             try: 
                 training_time = datetime.strptime(training['data_startu'], "%Y-%m-%d %H:%M:%S") 
             except ValueError: 
-                print(f"  ⚠️ Błąd daty treningu ({training.get('nazwa', 'Brak')}): {training['data_startu']}") 
                 continue 
 
             if match_time.date() == training_time.date(): 
@@ -34,15 +33,23 @@ def find_links(matches, unmatched_trainings):
 
                 if -15 <= start_time_difference <= 90: 
                     new_links[training['aktywnosc_id']] = match['mecz_id']
-                    print(f"🔗 Znalazłem powiązanie: {match.get('gospodarze')} - {match.get('goscie')} (Aktywność: {training['aktywnosc_id']})") 
+                    
+                    # POPRAWKA TUTAJ: Zmieniamy .get() na nawiasy kwadratowe []
+                    gosp = match['gospodarze']
+                    gosc = match['goscie']
+                    akt_id = training['aktywnosc_id']
+                    
+                    print(f"🔗 Znalazłem powiązanie: {gosp} - {gosc} (Aktywność: {akt_id})") 
                     
     return new_links
 
 def run_linker(): 
     """To są nasze 'RĘCE'. Odpowiadają tylko za pobranie i zapisanie danych."""
     print("🚀 Running linker...") 
+    
     matches = fetch_matches_for_linker(MOJE_NAZWISKO) 
-    unmatched_trainings = fetch_unmatched_trainings_for_linker() 
+    unmatched_trainings = fetch_unmatched_trainings_for_linker()
+    print(f"DEBUG: Pobrano {len(matches)} meczów dla nazwiska: {MOJE_NAZWISKO}")
 
     new_links = find_links(matches, unmatched_trainings)
     
