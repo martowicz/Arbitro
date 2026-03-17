@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import Literal, Union, List, Optional
 
 class EventBase(BaseModel):
@@ -48,6 +48,7 @@ class SettingsInput(BaseModel):
     garmin_password: Optional[str] = None
     openai_api_key: Optional[str] = None
     surname_name: Optional[str] = None
+    model_config = ConfigDict(extra='forbid')
     
 
 

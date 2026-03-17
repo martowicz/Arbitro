@@ -35,7 +35,7 @@ def get_training_chart_data(aktywnosc_id: str):
 def get_ai_analysis(item_type: str, item_id: str):
 
     encrypted_openai_api_key = get_setting("openai_api_key")
-    if not encrypted_openai_api_key: return HTTPException(status_code=400, detail="OpenAI API key not found")
+    if not encrypted_openai_api_key: raise HTTPException(status_code=400, detail="OpenAI API key not found")
 
     clean_key = decrypt_data(encrypted_openai_api_key)
     client = OpenAI(api_key=clean_key)
