@@ -68,6 +68,16 @@ After the containers are running:
 
 All credentials entered will be **securely encrypted** with AES and stored locally in your database.
 
+## 🔍 Preview
+Upcoming matches are yellow, tranings blue, and past matches are green. Clicking on match/training provides chart data visualisation and training summary.
+![](./images/main_panel_upcoming.png)
+
+![](./images/main_panel.png)
+![](./images/match_chart.png)
+![](./images/training_chart.png)
+
+
+
 
 
 ## 🧰 Notes
