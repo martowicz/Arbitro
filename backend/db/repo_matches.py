@@ -1,13 +1,13 @@
 from .connection import get_connection, create_all_tables
 
 def get_referee_id(cursor, full_name):
-    """Pobiera ID sędziego z bazy lub tworzy nowe, jeśli go nie ma."""
+    """Fetches the referee ID from the database or creates a new one if it doesn't exist."""
     cursor.execute('INSERT OR IGNORE INTO sedziowie (imie_nazwisko) VALUES (?)', (full_name,))
     cursor.execute('SELECT id FROM sedziowie WHERE imie_nazwisko = ?', (full_name,))
     return cursor.fetchone()[0]
 
 def load_known_data():
-    """Wciąga z bazy to, co już znamy (ID oraz sygnatury)."""
+    """Retrieves known data from the database (IDs and signatures)."""
     known_ids = set()
     known_signatures = set()
     
@@ -21,7 +21,6 @@ def load_known_data():
             known_signatures.add(signature)
         conn.close()
     except Exception:
-        # Jeśli bazy jeszcze nie ma, po prostu omijamy
         pass
         
     return known_ids, known_signatures
@@ -42,8 +41,6 @@ def save_matches_to_db(matches):
         if not match_id:
             continue
 
-        # ZMIANA: INSERT OR REPLACE zamiast OR IGNORE
-        # Dzięki temu, jeśli mecz był pusty, a teraz ma wynik/dane, to go zaktualizujemy
         cursor.execute('''
         INSERT OR REPLACE INTO mecze 
         (mecz_id, sezon, runda, liga, kolejka, data_meczu, gospodarze, goscie, wynik)
@@ -54,17 +51,15 @@ def save_matches_to_db(matches):
             match.get('goscie'), match.get('wynik')
         ))
 
-        # Zapisywanie obsady
         referees = match.get('obsada', {})
-        print(f"💾 Próbuję zapisać obsadę dla meczu {match_id}: {referees}") # DODAJ TO
+        print(f"💾 Próbuję zapisać obsadę dla meczu {match_id}: {referees}")
         if isinstance(referees, dict) and referees:
             for role, full_name in referees.items():
-                print(f"👤 Sędzia: {full_name} (Rola: {role})") # DODAJ TO
+                print(f"👤 Sędzia: {full_name} (Rola: {role})")
                 if full_name and full_name not in ["Błąd", ""]:
                     referee_id = get_referee_id(cursor, full_name)
-                    print(f"🆔 Otrzymane referee_id: {referee_id}") # DODAJ TO
+                    print(f"🆔 Otrzymane referee_id: {referee_id}")
                     
-                    # Tutaj zostawiamy OR IGNORE, żeby nie dublować sędziów w tym samym meczu
                     cursor.execute('''
                     INSERT OR IGNORE INTO obsady (mecz_id, sedzia_id, rola)
                     VALUES (?, ?, ?)

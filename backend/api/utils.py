@@ -34,14 +34,12 @@ def run_sync_process(scripts_to_run: list[str]):
     try:
         print(f"\n🚀 === START SYNCHRONIZACJI: {', '.join(scripts_to_run)} ===")
         
-        # 1. Uruchamiamy wszystkie skrypty z listy po kolei
         for script_name in scripts_to_run:
-            # Usuwamy ".py" z nazwy, jeśli ktoś je przekazał (np. zamieniamy "scraper_pzpn.py" na "scraper_pzpn")
             module_name = script_name.replace(".py", "")
             
             print(f"⏳ Uruchamiam: services.{module_name}...")
             
-            # Uruchamiamy jako moduł: python -m services.NAZWA
+            #Run as module
             result = subprocess.run(
                 [sys.executable, "-m", f"services.{module_name}"], 
                 cwd=str(BASE_DIR), 
@@ -51,13 +49,11 @@ def run_sync_process(scripts_to_run: list[str]):
             
             print(f"📝 LOGI ({module_name}):\n{result.stdout.strip()}")
             
-            # Jeśli którykolwiek skrypt wywali błąd, przerywamy cały proces
             if result.stderr or result.returncode != 0:
                 print(f"❌ BŁĘDY ({module_name}):\n{result.stderr.strip()}")
                 print("🛑 Przerywam proces. Linker nie zostanie uruchomiony.")
                 return 
 
-        # 2. Jeśli wszystkie skrypty przeszły bezbłędnie, odpalamy Linkera
         print(f"🔗 === START: services.linker ===")
         
         result_linker = subprocess.run(
@@ -86,7 +82,6 @@ def format_time(time_in_minutes: float) -> str:
     
     hours = int(time_in_minutes // 60)
     minutes = int(time_in_minutes % 60)
-    # :02d gwarantuje, że zawsze będą dwie cyfry (np. 05 zamiast 5)
     return f"{hours}:{minutes:02d}"
 
 
@@ -144,16 +139,15 @@ def extract_garmin_data(file_path: str, half_number: int = None, sample_interval
         
         if curr_ts is None or hr is None or hr == 0: continue
         
-        # LOGIKA PRÓBKOWANIA: Sprawdzamy, czy minęło wystarczająco dużo czasu (w milisekundach)
         if last_sampled_ts is not None:
             if (curr_ts - last_sampled_ts) < (sample_interval_sec * 1000):
-                continue # Pomijamy tę próbkę, bo jest za wcześnie
+                continue
                 
         last_sampled_ts = curr_ts
         mins = int((curr_ts - start_ts) / 60000)
 
         raw_speed = m[speed_idx] if speed_idx is not None and len(m) > speed_idx and m[speed_idx] is not None else 0
-        speed_kmh = round(raw_speed * 3.6, 1) # Mnożnik 0.1 z Garmina * 3.6 do km/h
+        speed_kmh = round(raw_speed * 3.6, 1) #convert to km/h
         
         label = format_referee_minute(mins, half_number)
         
@@ -197,8 +191,8 @@ def build_chart_dataset(title: str, labels: list, hr_data: list, speed_data: lis
 
 def process_activities_to_charts(activities_info: list) -> list:
     """
-    Uniwersalna funkcja generująca listę wykresów.
-    Przyjmuje listę krotek: (aktywnosc_id, tytul_wykresu, numer_polowy)
+    A generic function that generates a list of charts.
+    Accepts a list of tuples: (activity_id, chart_title, field_number).
     """
     charts = []
     for act_id, title, half_num in activities_info:
@@ -216,7 +210,7 @@ def process_activities_to_charts(activities_info: list) -> list:
 
 
 def generate_training_summary_prompt(hr_data: list, speed_data: list, sample_interval_sec: int) -> str:
-    """Kompresuje surowe dane do tekstowej pigułki dla OpenAI. - 5 minute chunks"""
+    """Compresses raw data into a text digest for OpenAI. - 5-minute chunks"""
     if not hr_data:
         return "Brak danych."
 
@@ -227,10 +221,8 @@ def generate_training_summary_prompt(hr_data: list, speed_data: list, sample_int
     max_hr = max(hr_data)
     max_speed = max(speed_data) if speed_data else 0
 
-    # Liczymy sprinty (zrywy powyżej 24 km/h)
     sprints_count = sum(1 for s in speed_data if s >= 24)
 
-    # Dzielimy na 10-minutowe bloki
     points_per_5_min = int((5 * 60) / sample_interval_sec)
     chunks_text = ""
 
@@ -246,7 +238,6 @@ def generate_training_summary_prompt(hr_data: list, speed_data: list, sample_int
 
         chunks_text += f"- Minuty {start_min}-{end_min}: Średnie HR: {c_avg_hr} bpm, Max Prędkość: {c_max_speed} km/h\n"
 
-    # Budujemy finalny prompt
         prompt = f"""Jako profesjonalny trener przygotowania motorycznego sędziów piłkarskich, przeanalizuj poniższe dane wydolnościowe.
 
         DANE WEJŚCIOWE:

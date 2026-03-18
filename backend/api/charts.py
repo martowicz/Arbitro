@@ -42,7 +42,7 @@ def get_ai_analysis(item_type: str, item_id: str):
 
     activities_to_analyze = []
     
-    # 1. Zbieramy ID aktywności (jedna dla treningu, dwie dla meczu)
+    #If activity is match, then we have two trainings to analyze
     if item_type == "match":
         query = "SELECT aktywnosc_id FROM treningi WHERE mecz_id = ? ORDER BY data_startu ASC"
         results = fetch_from_db(query, (item_id,))
@@ -53,7 +53,7 @@ def get_ai_analysis(item_type: str, item_id: str):
 
     all_hr = []
     all_speed = []
-    sample_interval = 10 # Musi być taki sam jak dla wykresów!
+    sample_interval = 10
     
     for act_id in activities_to_analyze:
         file_path = BASE_DIR / "data" / "training_details" / f"{act_id}.json"
@@ -65,13 +65,11 @@ def get_ai_analysis(item_type: str, item_id: str):
     if not all_hr:
         raise HTTPException(404, "Brak danych do analizy.")
 
-    # 3. Kompresja danych do Promptu (używamy funkcji z utils.py!)
     prompt = generate_training_summary_prompt(all_hr, all_speed, sample_interval)
 
-    # 4. Pytamy OpenAI
     try:
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo", # Polecam gpt-4o-mini jeśli masz dostęp, jest świetny i tani
+            model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7,
             max_tokens=250

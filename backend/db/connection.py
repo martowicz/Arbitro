@@ -2,25 +2,21 @@ import sqlite3
 from pathlib import Path
 import os
 
-# Ścieżki wyliczane raz, poprawnie dla całego projektu
 BASE_DIR = Path(__file__).resolve().parent.parent
 DB_PATH = str(BASE_DIR / "data" / "arbitro.db")
 
 def get_connection() -> sqlite3.Connection:
+    """Returns an active SQLite database connection. Always use this function!"""
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-    """Zwraca aktywne połączenie z bazą danych SQLite. Zawsze używaj tej funkcji!"""
-    # check_same_thread=False jest przydatne dla FastAPI
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-    # Pozwala odwoływać się do kolumn po nazwach (np. row['mecz_id'])
     conn.row_factory = sqlite3.Row 
     return conn
 
 def create_all_tables():
-    """Tworzy strukturę całej bazy danych, w tym nową tabelę na zaszyfrowane ustawienia."""
+    """Creates the entire database schema, including a new table for encrypted settings."""
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Tabele PZPN
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS mecze (
         mecz_id TEXT PRIMARY KEY,
@@ -44,7 +40,6 @@ def create_all_tables():
     )
     ''')
 
-    # Tabela Garmin
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS treningi (
         aktywnosc_id TEXT PRIMARY KEY,
@@ -54,7 +49,6 @@ def create_all_tables():
     )
     ''')
 
-    # Nasza NOWA Tabela do Etapu 2 (Szyfrowanie AES)
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY,

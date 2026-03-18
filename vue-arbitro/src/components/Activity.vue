@@ -67,7 +67,7 @@ const openChart = (id, type) => {
 <style scoped>
 .activity-card {
   background: var(--matchcard-color);
-  backdrop-filter: blur(10px); /* Efekt mrożonego szkła */
+  backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 10px;
   border-radius: 16px; 

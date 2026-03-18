@@ -43,13 +43,11 @@ import SyncManager from './components/SyncManager.vue'
 import Activity from './components/Activity.vue'
 import ActivityChartModal from './components/ActivityChartModal.vue'
 import Pagination from './components/Pagination.vue'
-// 🗑️ Usunięto import Settings.vue
 
-// Zmienne do Modala
 const isModalOpen = ref(false)
 const selectedItemId = ref(null)
 const selectedItemType = ref(null)
-// 🗑️ Usunięto showSettings
+
 
 const openChart = (id, type) => {
   selectedItemId.value = id
@@ -57,7 +55,7 @@ const openChart = (id, type) => {
   isModalOpen.value = true 
 }
 
-// Obsługa kliknięcia w kafelek
+
 const handleActivityClick = (activity) => {
     console.log("👉 Kliknięto aktywność:", activity)
     if (activity.match_id) {
@@ -69,7 +67,7 @@ const handleActivityClick = (activity) => {
     }
 }
 
-// Zmienne do listy i paginacji
+
 const activities = ref([])
 const isLoadingActivities = ref(true)
 const currentPage = ref(1)

@@ -128,14 +128,12 @@ def scrape_arbitro(current_season, is_new_user, known_ids=None, known_signatures
     if is_new_user: print(f"🆕 WYKRYTO NOWEGO UŻYTKOWNIKA. Rozpoczynam pełne pobieranie dla sezonu {current_season}...")
     else: print(f"🔄 ZNANY UŻYTKOWNIK. Szukam tylko nowych meczów dla sezonu {current_season}...")
 
-    # ========================================================
-    # FAZA 1: GŁÓWNY WĄTEK - LOGOWANIE I ZBIERANIE LINKÓW
-    # ========================================================
+
     with sync_playwright() as p:
         browser = p.chromium.launch(
             headless=True,
             args=[
-                "--disable-blink-features=AutomationControlled", # Ukrywa navigator.webdriver
+                "--disable-blink-features=AutomationControlled",
                 "--no-sandbox",
                 "--disable-setuid-sandbox"
             ]
@@ -162,15 +160,14 @@ def scrape_arbitro(current_season, is_new_user, known_ids=None, known_signatures
 
         print("🚀 Automatyczne logowanie do PZPN24...")
         page.goto("https://pzpn24.pzpn.pl/Login")
-        time.sleep(2) # Poczekaj aż strona "osiądzie"
+        time.sleep(2)
         page.fill("input#username", pzpn_email)
         time.sleep(1)
         page.fill("input#password", pzpn_password)
         time.sleep(1)
         page.click("input#kc-login")
-        # --- NOWA LOGIKA OBSŁUGI RODO ---
         page.wait_for_load_state("load")
-        time.sleep(3) # Daj serwerowi PZPN odetchnąć po logowaniu
+        time.sleep(3)
 
         print("🛡️ Neutralizuję baner RODO...")
         page.evaluate("""
@@ -179,7 +176,6 @@ def scrape_arbitro(current_season, is_new_user, known_ids=None, known_signatures
             document.body.style.overflow = 'auto';
         """)
         
-        # --- KONIEC POPRAWKI ---
 
         page.wait_for_load_state("networkidle")
         page.wait_for_timeout(3000)
@@ -192,7 +188,6 @@ def scrape_arbitro(current_season, is_new_user, known_ids=None, known_signatures
         print("✅ Logowanie zakończone (zweryfikowane).")
 
         print("💾 Zapisuję sesję do pliku...")
-        # Upewnij się, że folder data istnieje!
         SESSION_FILE.parent.mkdir(parents=True, exist_ok=True)
         context.storage_state(path=str(SESSION_FILE))
         print(f"✅ Plik sesji zapisany pod: {SESSION_FILE}")
@@ -202,11 +197,9 @@ def scrape_arbitro(current_season, is_new_user, known_ids=None, known_signatures
         if "SĘDZIA" not in current_profile_text:
             print("🔄 Jesteśmy na Profilu Podstawowym. Przełączam na konto Sędziego...")
             
-            # Otwórz menu wyboru konta
             page.locator(".navbar-right .dropdown-toggle").first.click()
             page.wait_for_timeout(1000)
             
-            # Szukamy linku, który zawiera "ZmienKonto" i ma w tekście "Sędzia"
             referee_link = page.locator("a[href*='ZmienKonto']", has_text="Sędzia").first
             
             if referee_link.count() > 0:
@@ -216,11 +209,8 @@ def scrape_arbitro(current_season, is_new_user, known_ids=None, known_signatures
                 time.sleep(2)
             else:
                 print("⚠️ Nie znaleziono linku do konta sędziego w menu!")
-                # Jeśli linku nie ma w menu, spróbujmy wejść w niego bezpośrednio (z Twoich logów)
-                # Ale lepiej użyć uniwersalnego locatora powyżej.
 
-        # PRZED KLIKNIĘCIEM W "JUDGE" DODAJ JESZCZE TO:
-        # Czasami baner odświeża się po przełączeniu profilu.
+        
         page.evaluate('document.getElementById("usercentrics-root")?.remove()')
 
 
@@ -263,9 +253,8 @@ def scrape_arbitro(current_season, is_new_user, known_ids=None, known_signatures
 
                 next_btn = page.locator("#spotkania_tabela_next")
                 if next_btn.is_visible() and "disabled" not in (next_btn.get_attribute("class") or ""):
-                    # Używamy force=True, żeby przebić się przez ewentualne niewidoczne warstwy
                     next_btn.click(force=True) 
-                    time.sleep(1.5) # Daj tabeli czas na przeładowanie danych
+                    time.sleep(1.5)
                     continue
                 break
 
@@ -276,20 +265,17 @@ def scrape_arbitro(current_season, is_new_user, known_ids=None, known_signatures
     
     if not all_new_matches:
         print(f"  ✅ Brak nowych meczów w sezonie {current_season}.")
-        if SESSION_FILE.exists(): SESSION_FILE.unlink() # Sprzątanie pliku sesji
+        if SESSION_FILE.exists(): SESSION_FILE.unlink()
         return []
 
     print(f"\n⚡ Odpalam {min(4, len(all_new_matches))} wątków do pobrania szczegółów {len(all_new_matches)} meczów...")
     
     final_matches = []
     try:
-        # Używamy ThreadPoolExecutor - maksymalnie 4 przeglądarki jednocześnie
         with ThreadPoolExecutor(max_workers=4) as executor:
-            # Funkcja executor.map rozdziela mecze do wolnych workerów
             results = executor.map(fetch_single_match_details, all_new_matches)
             final_matches = list(results)
     finally:
-        # SPRZĄTANIE: Niezależnie co się stanie, kasujemy plik sesyjny ze względów bezpieczeństwa
         if SESSION_FILE.exists():
             SESSION_FILE.unlink()
             print("🧹 Wyczyszczono pliki sesyjne.")
@@ -314,7 +300,7 @@ def run_scraper(current_season=CURRENT_SEASON):
     
     if new_matches:
         print(f"📥 Rozpoczynam zapisywanie pobranych danych do bazy SQLite...")
-        for m in new_matches[:3]: # Sprawdźmy tylko pierwsze 3
+        for m in new_matches[:3]:
             print(f"DEBUG: Mecz {m['gospodarze']} ma obsadę: {m.get('obsada')}")
         save_matches_to_db(new_matches)
     else:

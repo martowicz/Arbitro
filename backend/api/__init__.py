@@ -1,2 +1,0 @@
-#ten plik jest po to aby python wiedział że katalog 'api' jest modułem, z którego można importować funkcje i klasy.
-#Dzięki temu w main.py możemy pisać "from api import match, training, coach_ai" zamiast "from api.match import router as match_router" itd. co jest bardziej eleg

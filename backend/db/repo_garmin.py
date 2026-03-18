@@ -7,7 +7,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 GARMIN_JSON_PATH = str(BASE_DIR / "data" / "training_data" / "garmin_activities.json")
 
 def load_garmin_to_db():
-    """Wciąga dane z pliku JSON Garmina do bazy SQLite."""
+    """Imports data from a Garmin JSON file into the SQLite database."""
     if not os.path.exists(GARMIN_JSON_PATH):
         print(f"🛑 Błąd: Nie znaleziono pliku {GARMIN_JSON_PATH}!")
         return

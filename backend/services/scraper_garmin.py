@@ -71,7 +71,6 @@ def scrape_garmin():
         print(f"📈 Zapisano {pobrane_szczegoly} nowych plików ze szczegółami treningów.\n")
         print("-" * 50)
 
-        # Bezpośrednie wywołanie zapisu do bazy
         load_garmin_to_db()
 
     except Exception as e:

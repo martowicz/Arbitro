@@ -34,7 +34,6 @@ def find_links(matches, unmatched_trainings):
                 if -15 <= start_time_difference <= 90: 
                     new_links[training['aktywnosc_id']] = match['mecz_id']
                     
-                    # POPRAWKA TUTAJ: Zmieniamy .get() na nawiasy kwadratowe []
                     gosp = match['gospodarze']
                     gosc = match['goscie']
                     akt_id = training['aktywnosc_id']

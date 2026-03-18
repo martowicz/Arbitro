@@ -8,7 +8,7 @@ router = APIRouter(prefix="/api/settings", tags=["Settings"])
 @router.post("/")
 def update_settings(settings: SettingsInput):
     try:
-        # Zapisujemy tylko te pola, które użytkownik faktycznie przesłał
+        #Saving only seetings given by user
         if settings.pzpn_email:
             encrypted_pzpn_email = encrypt_data(settings.pzpn_email)
             save_setting("pzpn_email", encrypted_pzpn_email)
